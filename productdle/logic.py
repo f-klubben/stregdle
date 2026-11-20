@@ -18,6 +18,8 @@ import re
 
 from django.utils import timezone
 
+from . import wares
+
 # Seed prefix of the daily answer. Kept identical to the original in-app game so
 # the answer of the day does not change when the game moves to its own project.
 SEED_PREFIX = "stregdle"
@@ -183,6 +185,7 @@ def product_stats(product) -> dict:
         "id": str(product.id),
         "name": clean_name(product.name),
         "alias": product.alias or "",
+        "image": wares.image_for(product.name),
     }
     for column in COLUMNS:
         stats[column["key"]] = _field_str(product, column["key"])

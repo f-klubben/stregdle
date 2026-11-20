@@ -79,11 +79,29 @@ off for local runs so plain HTTP works.
 
 ## The game rules
 
-One product is the answer each day. The pick is deterministic per date (seeded
+One product is the answer each day. The picks are deterministic per date (seeded
 `stregdle-<date>`), the same seed the in-app version used, so moving the game
 here did not change the answer of the day. Guesses are compared attribute by
 attribute: price, alcohol, caffeine, sales and total are directional ("higher" /
 "lower"), while a shared category or room counts as a match.
+
+## Ware photos
+
+The photos in `productdle/static/productdle/wares/` came out of
+`Køleskabsfordeling 2025 April.xlsx` (the fridge planograms), one per ware. The
+name each photo answers to is listed in `productdle/wares.py`; markup, casing,
+accents and punctuation are ignored, and the most specific name wins, so a
+"Faxe Kondi Booster Melon Boost" never gets the plain "Faxe Kondi" picture.
+
+After the shop's product list changes, run this against the database to see
+which products still have no photo and which photos match nothing:
+
+```sh
+python manage.py wares
+```
+
+Add an alias in `productdle/wares.py` for each missing product (or drop the
+photo if the ware is gone).
 
 ## Tests
 

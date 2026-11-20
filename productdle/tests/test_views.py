@@ -59,6 +59,13 @@ class ViewTest(SimpleTestCase):
         self.assertEqual(data["name"], logic.clean_name(target.name))
         self.assertTrue(all(c["status"] == "correct" for c in data["columns"]))
 
+    def test_reveal_carries_the_photo(self):
+        # A single-product pool, so the answer is known.
+        repo = FakeRepository([make_product(id=9, name="Tuborg Grøn")])
+        with mock.patch.object(views, "repository", repo):
+            data = self.client.get("/reveal/").json()
+        self.assertEqual(data["image"], "/static/productdle/wares/tuborg-groen.png")
+
     def test_database_failure_is_503(self):
         with mock.patch.object(self.repo, "products", side_effect=DatabaseUnavailable("boom")):
             with self.assertLogs("productdle.views", level="ERROR"):

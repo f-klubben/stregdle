@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_GET
 
-from . import logic
+from . import logic, wares
 from .repository import DatabaseUnavailable, repository
 
 logger = logging.getLogger(__name__)
@@ -91,6 +91,7 @@ def reveal(request):
         {
             "name": logic.clean_name(target.name),
             "alias": target.alias or "",
+            "image": wares.image_for(target.name),
             "columns": logic.compare(target, target),
         }
     )

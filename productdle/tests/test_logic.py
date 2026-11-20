@@ -118,6 +118,7 @@ class ProductStatsTest(SimpleTestCase):
                 "id": "1",
                 "name": "Cola",
                 "alias": "cola",
+                "image": "",
                 "price": "25.00",
                 "category": "Sodavand",
                 "alcohol": "0.0 ml",
