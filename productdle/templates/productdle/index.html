@@ -129,9 +129,13 @@
   var attempts = 0;
   var gameOver = false;
   var won = false;
+  var gaveUp = false;
   var guesses = []; // statuses per guess, for the shareable result
+  var board = []; // every row on screen, so a reload can rebuild it
+  var restoring = false;
   var results = []; // latest search results
   var TODAY = "{{ today }}";
+  var STORE_KEY = 'stregdle:' + TODAY;
   var emptyRow = document.getElementById('empty-row');
 
   var input = document.getElementById('guessInput');
@@ -203,6 +207,8 @@
     rowsBody.insertBefore(tr, rowsBody.firstChild);
     // The revealed answer is not a guess, so it stays out of the share text.
     if (!isAnswer) guesses.push(columns.map(function (c) { return c.status; }));
+    board.push({ name: name, alias: alias, image: image, columns: columns, isAnswer: !!isAnswer });
+    save();
   }
 
   // Search results render as rows identical to guessed rows, neutral + clickable.
@@ -226,6 +232,53 @@
 
   function hideResults() { resultsBlock.style.display = 'none'; }
 
+  // The day's game lives in localStorage under its date, so a reload (or a
+  // browser restart) keeps the board. Yesterday's keys are dropped on load.
+  function save() {
+    if (restoring) return;
+    try {
+      localStorage.setItem(
+        STORE_KEY,
+        JSON.stringify({ board: board, attempts: attempts, won: won, gaveUp: gaveUp })
+      );
+    } catch (e) {
+      // Storage can be disabled or full; the game still works without it.
+    }
+  }
+
+  function restore() {
+    var saved = null;
+    try {
+      Object.keys(localStorage).forEach(function (key) {
+        if (key.indexOf('stregdle:') === 0 && key !== STORE_KEY) localStorage.removeItem(key);
+      });
+      saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+    } catch (e) {
+      return;
+    }
+    if (!saved || !saved.board || !saved.board.length) return;
+
+    restoring = true;
+    saved.board.forEach(function (row) {
+      addGuessRow(row.name, row.alias, row.image, row.columns, row.isAnswer);
+    });
+    attempts = saved.attempts || guesses.length;
+    won = !!saved.won;
+    gaveUp = !!saved.gaveUp;
+    restoring = false;
+    setAttempts();
+
+    if (won) {
+      setResult('Tillykke! Du ramte det på forsøg ' + attempts + '.');
+      lock();
+    } else if (gaveUp) {
+      setResult('Du gav op.');
+      lock();
+    } else {
+      setResult('Fortsæt hvor du slap.');
+    }
+  }
+
   function lock() {
     gameOver = true;
     input.disabled = true;
@@ -233,6 +286,7 @@
     document.getElementById('giveUpBtn').disabled = true;
     hideResults();
     shareBlock.style.display = 'block';
+    save();
   }
 
   var SQUARES = { correct: '\uD83D\uDFE9', wrong: '\u2B1B' }; // green, black
@@ -273,6 +327,7 @@
         addGuessRow(data.guess.name, data.guess.alias, data.guess.image, data.columns);
         attempts++;
         setAttempts();
+        save();
         if (data.won) {
           won = true;
           setResult('Tillykke! Du ramte det på forsøg ' + attempts + '.');
@@ -289,6 +344,7 @@
     fetch(REVEAL_URL)
       .then(function (r) { return r.json(); })
       .then(function (rev) {
+        gaveUp = true;
         addGuessRow(rev.name, rev.alias, rev.image, rev.columns, true);
         lock();
       });
@@ -353,6 +409,7 @@
   });
   document.getElementById('shareBtn').addEventListener('click', share);
 
+  restore();
   input.focus();
 })();
 </script>

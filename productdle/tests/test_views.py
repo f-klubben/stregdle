@@ -32,6 +32,9 @@ class ViewTest(SimpleTestCase):
         self.assertContains(response, 'id="shareBtn"')
         self.assertContains(response, 'var TODAY = "')
         self.assertContains(response, """SQUARES = { correct: '\\uD83D\\uDFE9'""")
+        # Guesses survive a reload via localStorage, keyed by the day.
+        self.assertContains(response, "var STORE_KEY = 'stregdle:' + TODAY;")
+        self.assertContains(response, "restore();")
 
     def test_healthz_is_cheap_and_ok(self):
         # No database access: the pool is not even consulted on this path.
