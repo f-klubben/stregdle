@@ -1,0 +1,302 @@
+{% extends "productdle/base.html" %}
+
+{% block title %}Stregsystemdle{% endblock %}
+{% block heading %}Stregsystemdle{% endblock %}
+
+{% block head %}
+<style>
+  /* Game-specific styles; the page otherwise reuses the stregsystem chrome. */
+  .sdl-wrap { max-width: 1040px; margin: 1em auto; padding: 0 1em; }
+  .sdl-status { text-align: center; font-weight: bold; margin: 0 0 .4em; min-height: 1.6em; }
+  .sdl-instructions { display: inline-block; text-align: initial; margin-bottom: .6em; }
+  .sdl-instructions > p { font-weight: bold; text-align: center; margin-top: 0; margin-bottom: .3em; }
+  .sdl-instructions ol { font-weight: bold; margin-top: .2em; }
+  .sdl-instructions ol span { font-weight: normal; }
+  .sdl-legend { text-align: center; margin-top: .75em; }
+  .sdl-legend span {
+    display: inline-block; padding: 1px 8px; margin: 0 .4em;
+    border: 1px solid black; font-size: .85em;
+  }
+  .sdl-legend .c { background: #5f8f5b; color: #fff; }
+  .sdl-legend .a { background: #d2a51c; color: #fff; }
+  .sdl-legend .w { background: #a0a0a0; color: #fff; }
+  .sdl-control { display: flex; gap: .5em; justify-content: center; margin-bottom: 1em; }
+  .sdl-control input { width: 26em; }
+  .sdl-control .guess { background: #cf1020; color: #fff; }
+  .sdl-block { margin-bottom: 1em; }
+  table.sdl-table { width: 100%; margin: 0 auto; }
+  table.sdl-table th, table.sdl-table td { padding: 7px 8px; text-align: center; }
+  table.sdl-table th:first-child, table.sdl-table td:first-child { text-align: left; }
+  td.sdl-correct { background: #5f8f5b; color: #fff; }
+  td.sdl-high, td.sdl-low { background: #d2a51c; color: #fff; }
+  td.sdl-wrong { background: #a0a0a0; color: #fff; }
+  .sdl-val { display: block; }
+  .sdl-dir { display: block; font-size: .85rem; font-weight: bold; }
+  tr.sdl-res { cursor: pointer; }
+  tr.sdl-res:hover, tr.sdl-res.hover { background: #fff4d6; }
+  .sdl-hint { color: #666; font-style: italic; text-align: center; }
+</style>
+{% endblock %}
+
+{% block signup_button %}
+<span id="attempts">Forsøg: 0</span>
+{% endblock %}
+
+{% block content %}
+<div class="sdl-wrap">
+  <div class="sdl-instructions">
+    <p>Du kan gætte dagens vare på to forskellige måder:</p>
+    <ol>
+      <li><span>Indtast en vare eller kortnavn nedenfor. Du vil så få vist mulige varer med deres statistik i tabellen, og kan klikke på en for at gætte.</span></li>
+      <li><span>Indtast produktets ID (fx "16") og tryk enter. Dit gæt bliver direkte registreret.</span></li>
+    </ol>
+  </div>
+
+  <p class="sdl-status" id="status">Skriv en vare, ID eller kortnavn for at starte.</p>
+
+  <div class="sdl-control">
+    <input type="text" id="guessInput" placeholder="Søg efter en vare, ID eller kortnavn…" autocomplete="off">
+    <button type="button" class="guess" id="guessBtn">Gæt</button>
+    <button type="button" id="giveUpBtn">Giv op</button>
+  </div>
+
+  <!-- Search results: same columns/format as the guess board. -->
+  <div class="sdl-block" id="resultsBlock" style="display:none;">
+    <table class="default sdl-table">
+      <thead>
+        <tr>
+          <th>Produkt</th>
+          <th>ID</th>
+          <th>Pris</th>
+          <th>Kategori</th>
+          <th>Alkohol</th>
+          <th>Koffein</th>
+          <th>Rum</th>
+          <th>Salg/md</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody id="resultsRows"></tbody>
+    </table>
+  </div>
+
+  <!-- The guess board; newest guess at the top. -->
+  <div class="sdl-block">
+    <table class="default sdl-table">
+      <thead>
+        <tr>
+          <th>Produkt</th>
+          <th>ID</th>
+          <th>Pris</th>
+          <th>Kategori</th>
+          <th>Alkohol</th>
+          <th>Koffein</th>
+          <th>Rum</th>
+          <th>Salg/md</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody id="rows">
+        <tr id="empty-row"><td colspan="9"><p class="sdl-hint">Endnu ingen gæt.</p></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sdl-legend">
+    <span class="c">Korrekt</span>
+    <span class="a">For lavt &#9650; / For højt &#9660;</span>
+    <span class="w">Ingen relation</span>
+  </div>
+</div>
+
+<script>
+(function () {
+  // Endpoints come from the URL config, so the game can be mounted anywhere.
+  var SEARCH_URL = "{% url 'productdle:search' %}";
+  var GUESS_URL = "{% url 'productdle:guess' %}";
+  var REVEAL_URL = "{% url 'productdle:reveal' %}";
+
+  var attempts = 0;
+  var gameOver = false;
+  var results = []; // latest search results
+  var emptyRow = document.getElementById('empty-row');
+
+  var input = document.getElementById('guessInput');
+  var rowsBody = document.getElementById('rows');
+  var statusEl = document.getElementById('status');
+  var attemptsEl = document.getElementById('attempts');
+  var resultsBlock = document.getElementById('resultsBlock');
+  var resultsRows = document.getElementById('resultsRows');
+
+  function setResult(m) { statusEl.textContent = m; }
+  function setAttempts() { attemptsEl.textContent = 'Forsøg: ' + attempts; }
+
+  // Column order shared by the guess board and the search table.
+  var COLUMN_KEYS = ['id', 'price', 'category', 'alcohol', 'caffeine', 'rooms', 'sales', 'total'];
+
+  function guessCellTd(col) {
+    var td = document.createElement('td');
+    td.className = 'sdl-' + col.status;
+    var v = document.createElement('span');
+    v.className = 'sdl-val';
+    v.textContent = col.value;
+    td.appendChild(v);
+    if (col.status === 'high') {
+      // Guess value is above the target: aim lower.
+      var d = document.createElement('span'); d.className = 'sdl-dir'; d.textContent = '\u25bc'; td.appendChild(d);
+    } else if (col.status === 'low') {
+      // Guess value is below the target: aim higher.
+      var d = document.createElement('span'); d.className = 'sdl-dir'; d.textContent = '\u25b2'; td.appendChild(d);
+    }
+    return td;
+  }
+
+  // Name cell: bold name. The optional short name (alias) still resolves
+  // guesses but is not rendered here.
+  function nameCell(name, alias, isAnswer) {
+    var td = document.createElement('td');
+    td.style.textAlign = 'left';
+    if (isAnswer) {
+      var pre = document.createElement('span');
+      pre.style.color = '#666';
+      pre.style.marginRight = '6px';
+      pre.textContent = 'Svaret:';
+      td.appendChild(pre);
+    }
+    var b = document.createElement('span');
+    b.style.fontWeight = 'bold';
+    b.textContent = name;
+    td.appendChild(b);
+    return td;
+  }
+
+  function addGuessRow(name, alias, columns, isAnswer) {
+    if (emptyRow) { rowsBody.removeChild(emptyRow); emptyRow = null; }
+    var tr = document.createElement('tr');
+    tr.appendChild(nameCell(name, alias, isAnswer));
+    columns.forEach(function (c) { tr.appendChild(guessCellTd(c)); });
+    // Most recent guess goes to the top.
+    rowsBody.insertBefore(tr, rowsBody.firstChild);
+  }
+
+  // Search results render as rows identical to guessed rows, neutral + clickable.
+  function addResultRows(products) {
+    resultsRows.innerHTML = '';
+    products.forEach(function (p, i) {
+      var tr = document.createElement('tr');
+      tr.className = 'sdl-res';
+      tr.appendChild(nameCell(p.name, p.alias));
+      COLUMN_KEYS.forEach(function (k) {
+        var c = document.createElement('td');
+        c.textContent = p[k];
+        tr.appendChild(c);
+      });
+      tr.addEventListener('mouseenter', function () { hover(i); });
+      tr.addEventListener('click', function () { guessById(p.id, p.name); });
+      resultsRows.appendChild(tr);
+    });
+    resultsBlock.style.display = products.length ? 'block' : 'none';
+  }
+
+  function hideResults() { resultsBlock.style.display = 'none'; }
+
+  function lock() {
+    gameOver = true;
+    input.disabled = true;
+    document.getElementById('guessBtn').disabled = true;
+    document.getElementById('giveUpBtn').disabled = true;
+    hideResults();
+  }
+
+  function guessById(id, name) {
+    if (gameOver) return;
+    fetch(GUESS_URL + '?id=' + encodeURIComponent(id))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.error) { setResult(data.error); return; }
+        hideResults();
+        addGuessRow(data.guess.name, data.guess.alias, data.columns);
+        attempts++;
+        setAttempts();
+        if (data.won) {
+          setResult('Tillykke! Du ramte det på forsøg ' + attempts + '.');
+          lock();
+        } else {
+          setResult('Ikke lige den. Prøv igen.');
+          input.value = '';
+          input.focus();
+        }
+      });
+  }
+
+  function revealAnswer() {
+    fetch(REVEAL_URL)
+      .then(function (r) { return r.json(); })
+      .then(function (rev) {
+        addGuessRow(rev.name, rev.alias, rev.columns, true);
+        lock();
+      });
+  }
+
+  function tryGuess(name) {
+    name = name.trim();
+    if (!name || gameOver) return;
+    var q = name.toLowerCase();
+    var hit = results.filter(function (p) {
+      return p.name.toLowerCase() === q || (p.alias && p.alias.toLowerCase() === q) || String(p.id) === q;
+    })[0];
+    if (hit) { guessById(hit.id, hit.name); return; }
+    // Fallback: resolve against the server (matches name, alias or plain ID).
+    fetch(SEARCH_URL + '?q=' + encodeURIComponent(name))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var list = data.products || [];
+        var exact = list.filter(function (p) {
+          return p.name.toLowerCase() === q || (p.alias && p.alias.toLowerCase() === q) || String(p.id) === q;
+        })[0] || list[0];
+        if (exact) { results = list; guessById(exact.id, exact.name); }
+        else setResult('Ukendt vare: "' + name + '".');
+      });
+  }
+
+  var hoverIndex = -1;
+  function hover(i) {
+    hoverIndex = i;
+    Array.prototype.forEach.call(resultsRows.children, function (el, j) {
+      el.classList.toggle('hover', j === i);
+    });
+  }
+
+  var debounce;
+  function search() {
+    var q = input.value.trim();
+    if (!q) { results = []; addResultRows([]); return; }
+    fetch(SEARCH_URL + '?q=' + encodeURIComponent(q))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        results = data.products || [];
+        addResultRows(results);
+      });
+  }
+
+  input.addEventListener('input', function () {
+    if (gameOver) return;
+    clearTimeout(debounce);
+    debounce = setTimeout(search, 120);
+  });
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); tryGuess(input.value); hideResults(); }
+    var n = resultsRows.children.length;
+    if (e.key === 'ArrowDown' && n) { e.preventDefault(); hover((hoverIndex + 1) % n); }
+    if (e.key === 'ArrowUp' && n) { e.preventDefault(); hover((hoverIndex - 1 + n) % n); }
+  });
+  document.getElementById('guessBtn').addEventListener('click', function () { tryGuess(input.value); });
+  document.getElementById('giveUpBtn').addEventListener('click', function () {
+    setResult('Du gav op.');
+    revealAnswer();
+  });
+
+  input.focus();
+})();
+</script>
+{% endblock %}
