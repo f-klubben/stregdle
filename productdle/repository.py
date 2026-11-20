@@ -42,7 +42,10 @@ SELECT p.id,
            AND s.timestamp > NOW() - INTERVAL %s DAY) AS sales_window,
        (SELECT COUNT(*)
           FROM stregsystem_sale s
-         WHERE s.product_id = p.id) AS total_sales
+         WHERE s.product_id = p.id) AS total_sales,
+       DATEDIFF(NOW(), (SELECT MAX(s.timestamp)
+                          FROM stregsystem_sale s
+                         WHERE s.product_id = p.id)) AS last_sale_days
   FROM stregsystem_product p
  ORDER BY p.id
 """
@@ -81,6 +84,7 @@ class Product:
     alias: str
     sales_window: int
     total_sales: int
+    last_sale_days: int | None = None
 
     @property
     def avg_monthly_sales(self) -> float:
@@ -192,6 +196,7 @@ class SqlRepository:
                 alias=aliases.get(row["id"], ""),
                 sales_window=int(row["sales_window"] or 0),
                 total_sales=int(row["total_sales"] or 0),
+                last_sale_days=None if row["last_sale_days"] is None else int(row["last_sale_days"]),
             )
             for row in products
         ]

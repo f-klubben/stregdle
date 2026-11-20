@@ -70,14 +70,7 @@
       <thead>
         <tr>
           <th>Produkt</th>
-          <th>ID</th>
-          <th>Pris</th>
-          <th>Kategori</th>
-          <th>Alkohol</th>
-          <th>Koffein</th>
-          <th>Rum</th>
-          <th>Salg/md</th>
-          <th>Total</th>
+          {% for column in columns %}<th>{{ column.label }}</th>{% endfor %}
         </tr>
       </thead>
       <tbody id="resultsRows"></tbody>
@@ -90,18 +83,11 @@
       <thead>
         <tr>
           <th>Produkt</th>
-          <th>ID</th>
-          <th>Pris</th>
-          <th>Kategori</th>
-          <th>Alkohol</th>
-          <th>Koffein</th>
-          <th>Rum</th>
-          <th>Salg/md</th>
-          <th>Total</th>
+          {% for column in columns %}<th>{{ column.label }}</th>{% endfor %}
         </tr>
       </thead>
       <tbody id="rows">
-        <tr id="empty-row"><td colspan="9"><p class="sdl-hint">Endnu ingen gæt.</p></td></tr>
+        <tr id="empty-row"><td colspan="{{ columns|length|add:1 }}"><p class="sdl-hint">Endnu ingen gæt.</p></td></tr>
       </tbody>
     </table>
   </div>
@@ -152,7 +138,7 @@
   function setAttempts() { attemptsEl.textContent = 'Forsøg: ' + attempts; }
 
   // Column order shared by the guess board and the search table.
-  var COLUMN_KEYS = ['id', 'price', 'category', 'alcohol', 'caffeine', 'rooms', 'sales', 'total'];
+  var COLUMN_KEYS = [{% for column in columns %}"{{ column.key }}"{% if not forloop.last %}, {% endif %}{% endfor %}];
 
   function guessCellTd(col) {
     var td = document.createElement('td');
@@ -240,7 +226,7 @@
     try {
       localStorage.setItem(
         STORE_KEY,
-        JSON.stringify({ board: board, attempts: attempts, won: won, gaveUp: gaveUp })
+        JSON.stringify({ board: board, attempts: attempts, won: won, gaveUp: gaveUp, keys: COLUMN_KEYS })
       );
     } catch (e) {
       // Storage can be disabled or full; the game still works without it.
@@ -258,6 +244,11 @@
       return;
     }
     if (!saved || !saved.board || !saved.board.length) return;
+    // A board from another column layout would put values in the wrong cells.
+    if ((saved.keys || []).join() !== COLUMN_KEYS.join()) {
+      try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+      return;
+    }
 
     restoring = true;
     saved.board.forEach(function (row) {

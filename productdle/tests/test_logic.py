@@ -123,6 +123,75 @@ class CompareTest(SimpleTestCase):
         self.assertEqual(stats["rooms"], "-")
 
 
+class LayoutTest(SimpleTestCase):
+    def test_board_switches_at_midnight(self):
+        before = logic.columns(datetime.date(2026, 11, 20))
+        after = logic.columns(datetime.date(2026, 11, 21))
+
+        self.assertIn("caffeine", [c["key"] for c in before])
+        self.assertNotIn("named", [c["key"] for c in before])
+
+        keys = [c["key"] for c in after]
+        self.assertNotIn("caffeine", keys)
+        self.assertIn("named", keys)
+        self.assertIn("last_sale", keys)
+
+    def test_compare_follows_the_day(self):
+        cola = make_product(id=1, name="Cola", categories=["Sodavand"], rooms=["Kælder"])
+        legacy = [c["key"] for c in logic.compare(cola, cola, day=datetime.date(2026, 11, 20))]
+        modern = [c["key"] for c in logic.compare(cola, cola, day=datetime.date(2026, 11, 21))]
+        self.assertIn("caffeine", legacy)
+        self.assertIn("last_sale", modern)
+        self.assertNotIn("caffeine", modern)
+
+
+class NamedAndLastSaleTest(SimpleTestCase):
+    def test_named_column_is_a_boolean_match(self):
+        yes = make_product(id=1, name="Cola", alias="cola")
+        also_yes = make_product(id=2, name="Fanta", alias="fanta")
+        no = make_product(id=3, name="Vand")
+        day = datetime.date(2026, 11, 21)
+
+        by_key = {c["key"]: c for c in logic.compare(yes, also_yes, day=day)}
+        self.assertEqual(by_key["named"]["status"], "correct")
+        self.assertEqual(by_key["named"]["value"], "Ja")
+
+        by_key = {c["key"]: c for c in logic.compare(yes, no, day=day)}
+        self.assertEqual(by_key["named"]["status"], "wrong")
+        self.assertEqual(by_key["named"]["value"], "Ja")
+        self.assertEqual(logic.named_str(no), "Nej")
+
+    def test_last_sale_is_directional(self):
+        day = datetime.date(2026, 11, 21)
+        recent = make_product(id=1, name="Cola", last_sale_days=3)
+        old = make_product(id=2, name="Fanta", last_sale_days=40)
+
+        by_key = {c["key"]: c for c in logic.compare(recent, old, day=day)}
+        self.assertEqual(by_key["last_sale"]["status"], "low")
+        self.assertEqual(by_key["last_sale"]["value"], "3 dage")
+
+        by_key = {c["key"]: c for c in logic.compare(old, recent, day=day)}
+        self.assertEqual(by_key["last_sale"]["status"], "high")
+
+    def test_never_sold_products(self):
+        day = datetime.date(2026, 11, 21)
+        never = make_product(id=1, name="Ny vare")
+        sold = make_product(id=2, name="Cola", last_sale_days=5)
+
+        by_key = {c["key"]: c for c in logic.compare(never, never, day=day)}
+        self.assertEqual(by_key["last_sale"]["status"], "correct")
+        self.assertEqual(by_key["last_sale"]["value"], "aldrig")
+
+        by_key = {c["key"]: c for c in logic.compare(never, sold, day=day)}
+        self.assertEqual(by_key["last_sale"]["status"], "wrong")
+
+    def test_last_sale_wording(self):
+        self.assertEqual(logic.last_sale_str(None), "aldrig")
+        self.assertEqual(logic.last_sale_str(0), "i dag")
+        self.assertEqual(logic.last_sale_str(1), "1 dag")
+        self.assertEqual(logic.last_sale_str(12), "12 dage")
+
+
 class ProductStatsTest(SimpleTestCase):
     def test_product_stats_shape(self):
         product = make_product(
@@ -135,9 +204,10 @@ class ProductStatsTest(SimpleTestCase):
             alias="cola",
             sales_window=3,
             total_sales=2,
+            last_sale_days=4,
         )
         self.assertEqual(
-            logic.product_stats(product),
+            logic.product_stats(product, day=datetime.date(2026, 11, 20)),
             {
                 "id": "1",
                 "name": "Cola",
@@ -152,6 +222,24 @@ class ProductStatsTest(SimpleTestCase):
                 "total": "2",
             },
         )
+
+    def test_product_stats_shape_after_the_layout_switch(self):
+        product = make_product(
+            id=1,
+            name="Cola",
+            price=2500,
+            caffeine_mg=34,
+            categories=["Sodavand"],
+            rooms=["Kælder"],
+            alias="cola",
+            sales_window=3,
+            total_sales=2,
+            last_sale_days=4,
+        )
+        stats = logic.product_stats(product, day=datetime.date(2026, 11, 21))
+        self.assertEqual(stats["last_sale"], "4 dage")
+        self.assertEqual(stats["named"], "Ja")
+        self.assertNotIn("caffeine", stats)
 
     def test_clean_name_strips_markup(self):
         self.assertEqual(logic.clean_name("Cocio <b>(Mellem)</b>"), "Cocio (Mellem)")
