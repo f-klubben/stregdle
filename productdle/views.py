@@ -23,12 +23,23 @@ def index(request):
     )
 
 
+@require_GET
+def healthz(request):
+    """Liveness check for the reverse proxy and for deploy scripts.
+
+    Deliberately does not touch the database: the page already reports when the
+    shop's database is unreachable.
+    """
+    return JsonResponse({"status": "ok"})
+
+
 def _products():
     """The product pool, or None if the stregsystem database is unreachable."""
     try:
         return repository.products()
-    except DatabaseUnavailable:
-        logger.exception("Could not read products from the stregsystem database")
+    except DatabaseUnavailable as exc:
+        # A database outage would otherwise log a traceback on every request.
+        logger.warning("Could not read products from the stregsystem database: %s", exc)
         return None
 
 

@@ -1,6 +1,6 @@
 from unittest import mock
 
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, override_settings
 
 from productdle import logic, views
 from productdle.repository import DatabaseUnavailable
@@ -8,6 +8,7 @@ from productdle.repository import DatabaseUnavailable
 from .factories import FakeRepository, make_product
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class ViewTest(SimpleTestCase):
     def setUp(self):
         logic._target_cache.clear()
@@ -27,6 +28,13 @@ class ViewTest(SimpleTestCase):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Stregsystemdle")
+
+    def test_healthz_is_cheap_and_ok(self):
+        # No database access: the pool is not even consulted on this path.
+        with mock.patch.object(self.repo, "products", side_effect=AssertionError("db touched")):
+            response = self.client.get("/healthz")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "ok"})
 
     def test_search_returns_matching_products(self):
         data = self.client.get("/search/", {"q": "cola"}).json()
@@ -68,6 +76,6 @@ class ViewTest(SimpleTestCase):
 
     def test_database_failure_is_503(self):
         with mock.patch.object(self.repo, "products", side_effect=DatabaseUnavailable("boom")):
-            with self.assertLogs("productdle.views", level="ERROR"):
+            with self.assertLogs("productdle.views", level="WARNING"):
                 for url in ("/search/?q=cola", "/guess/?id=1", "/reveal/"):
                     self.assertEqual(self.client.get(url).status_code, 503, url)
