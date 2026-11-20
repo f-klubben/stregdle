@@ -56,7 +56,7 @@ class ViewTest(SimpleTestCase):
         wrong = self.beer if target.id == self.cola.id else self.cola
         data = self.client.get("/guess/", {"id": wrong.id}).json()
         self.assertFalse(data["won"])
-        self.assertEqual({c["key"] for c in data["columns"]}, {c["key"] for c in logic.columns()})
+        self.assertEqual({c["key"] for c in data["columns"]}, {c["key"] for c in logic.COLUMNS})
 
     def test_guess_can_win(self):
         target = logic.daily_target(self.repo.products())

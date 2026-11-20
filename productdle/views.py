@@ -17,16 +17,14 @@ SEARCH_LIMIT = 10
 
 
 def index(request):
-    day = timezone.localdate()
     return render(
         request,
         "productdle/index.html",
         {
             "stregsystem_url": settings.STREGSYSTEM_URL,
             "source_url": settings.SOURCE_URL,
-            "today": day.isoformat(),
-            # The board layout switches at midnight, see logic.NEW_LAYOUT_FROM.
-            "columns": logic.columns(day),
+            "today": timezone.localdate().isoformat(),
+            "columns": logic.COLUMNS,
         },
     )
 
@@ -62,9 +60,8 @@ def search(request):
     if products is None:
         return JsonResponse({"error": "Kan ikke læse varerne lige nu."}, status=503)
 
-    day = timezone.localdate()
     matched = logic.search_products(products, query, SEARCH_LIMIT)
-    return JsonResponse({"products": [logic.product_stats(product, day=day) for product in matched]})
+    return JsonResponse({"products": [logic.product_stats(product) for product in matched]})
 
 
 @require_GET
@@ -87,11 +84,10 @@ def guess(request):
     if product is None:
         return JsonResponse({"error": "Ukendt vare."}, status=404)
 
-    day = timezone.localdate()
     return JsonResponse(
         {
-            "guess": logic.product_stats(product, day=day),
-            "columns": logic.compare(product, target, day=day),
+            "guess": logic.product_stats(product),
+            "columns": logic.compare(product, target),
             "won": product.id == target.id,
         }
     )
@@ -113,6 +109,6 @@ def reveal(request):
             "name": logic.clean_name(target.name),
             "alias": target.alias or "",
             "image": wares.image_for(target.name),
-            "columns": logic.compare(target, target, day=timezone.localdate()),
+            "columns": logic.compare(target, target),
         }
     )

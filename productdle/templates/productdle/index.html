@@ -244,8 +244,9 @@
       return;
     }
     if (!saved || !saved.board || !saved.board.length) return;
-    // A board from another column layout would put values in the wrong cells.
-    if ((saved.keys || []).join() !== COLUMN_KEYS.join()) {
+    // A board from a different column layout would put values in the wrong cells.
+    // Boards saved before that check existed carry no keys and are still fine.
+    if (saved.keys && saved.keys.join() !== COLUMN_KEYS.join()) {
       try { localStorage.removeItem(STORE_KEY); } catch (e) {}
       return;
     }

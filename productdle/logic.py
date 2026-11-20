@@ -24,26 +24,8 @@ from . import wares
 # the answer of the day does not change when the game moves to its own project.
 SEED_PREFIX = "stregdle"
 
-# The board changed on 2026-11-21: Koffein went, Kortnavn and Sidste salg came
-# in. Both sets live here for one switch-over day so a deploy cannot change a
-# round that is already being played - the new set takes over at midnight, when
-# every browser starts a fresh board anyway. LEGACY_COLUMNS can be deleted once
-# 2026-11-21 is past.
-NEW_LAYOUT_FROM = datetime.date(2026, 11, 21)
-
 # Column order shared by the guess board and the search table. The leading
 # "id" column sits right next to the product name, like the main menu.
-LEGACY_COLUMNS = [
-    {"key": "id", "label": "ID"},
-    {"key": "price", "label": "Pris"},
-    {"key": "category", "label": "Kategori"},
-    {"key": "alcohol", "label": "Alkohol"},
-    {"key": "caffeine", "label": "Koffein"},
-    {"key": "rooms", "label": "Rum"},
-    {"key": "sales", "label": "Salg/md"},
-    {"key": "total", "label": "Total"},
-]
-
 COLUMNS = [
     {"key": "id", "label": "ID"},
     {"key": "price", "label": "Pris"},
@@ -55,12 +37,6 @@ COLUMNS = [
     {"key": "last_sale", "label": "Sidste salg"},
     {"key": "named", "label": "Kortnavn"},
 ]
-
-
-def columns(day=None) -> list:
-    """The columns the board shows on `day` (today by default)."""
-    day = day or timezone.localdate()
-    return COLUMNS if day >= NEW_LAYOUT_FROM else LEGACY_COLUMNS
 
 
 # answer date (ISO) -> product id, so the answer is stable for the whole day.
@@ -202,7 +178,7 @@ def _status(guess, target, key) -> str:
     return "wrong"
 
 
-def compare(guess, target, day=None):
+def compare(guess, target):
     """Compare a guess against the target and return per-attribute states.
 
     Each entry carries the guess's own displayed value, so the board can show
@@ -221,7 +197,7 @@ def compare(guess, target, day=None):
             "status": _status(guess, target, column["key"]),
             "value": _field_str(guess, column["key"]),
         }
-        for column in columns(day)
+        for column in COLUMNS
     ]
 
 
@@ -233,10 +209,10 @@ def clean_name(name: str) -> str:
     return TAG_RE.sub("", name)
 
 
-def product_stats(product, day=None) -> dict:
+def product_stats(product) -> dict:
     """Display values for a product, for search rows / board rows.
 
-    Keys match the columns order so search and guess rows share one format.
+    Keys match the COLUMNS order so search and guess rows share one format.
     """
     stats = {
         "id": str(product.id),
@@ -244,7 +220,7 @@ def product_stats(product, day=None) -> dict:
         "alias": product.alias or "",
         "image": wares.image_for(product.name),
     }
-    for column in columns(day):
+    for column in COLUMNS:
         stats[column["key"]] = _field_str(product, column["key"])
     return stats
 
