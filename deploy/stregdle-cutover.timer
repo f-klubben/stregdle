@@ -1,0 +1,11 @@
+# The midnight after a deploy. Change the date for the next cutover;
+# Persistent=true also runs it if the server was down at that moment.
+[Unit]
+Description=Stregsystemdle cutover at midnight
+
+[Timer]
+OnCalendar=2026-11-21 00:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

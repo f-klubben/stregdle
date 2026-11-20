@@ -122,6 +122,27 @@ sudo caddy reload --config /srv/infra/caddy/Caddyfile --adapter caddyfile
 - Static files: `collectstatic` writes `/data/stregdle/staticfiles`, which Caddy
   serves under `/static/` with a 30 day cache.
 
+### Cutting over at midnight
+
+A change that alters the game itself - the columns, the scoring, the answer pool -
+must not land in the middle of a day: players are mid-board. Deploy it in two
+halves:
+
+1. Leave the running checkout alone and push the new release to `main`.
+2. Install the cutover timer for the coming midnight:
+
+```sh
+sudo install -m 755 deploy/cutover.sh /usr/local/sbin/stregdle-cutover.sh
+sudo install -m 644 deploy/stregdle-cutover.service deploy/stregdle-cutover.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now stregdle-cutover.timer
+systemctl list-timers stregdle-cutover.timer --no-pager
+```
+
+At 00:00 the timer pulls `main`, reinstalls, runs `collectstatic`, restarts the
+service and removes itself. `Persistent=true` catches up if the server was down
+at that moment. Ordinary changes (a photo, a typo, docs) need none of this.
+
 `manage.py check --deploy` must report no issues before you start the service;
 it flags a weak secret key and missing HTTPS settings. Note that `collectstatic`
 has to run again whenever the ware photos change.

@@ -1,0 +1,6 @@
+[Unit]
+Description=Stregsystemdle midnight cutover
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/stregdle-cutover.sh
