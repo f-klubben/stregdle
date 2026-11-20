@@ -26,6 +26,18 @@ class WareImageTest(SimpleTestCase):
         self.assertTrue(wares.image_for("Sport-Colá Light").endswith("sport-cola-light.png"))
         self.assertTrue(wares.image_for("Grimbergen Double Ambrée").endswith("grimbergen-double-ambree.png"))
 
+    def test_name_containing_the_ware_still_matches(self):
+        # The shop names things like this; the ware name sits in the middle.
+        self.assertTrue(wares.image_for("Øl(Tuborg Grøn/-Classic & Guld) (excl. pant)").endswith("tuborg-groen.png"))
+        self.assertTrue(wares.image_for("Vand (Kildevæld uden brus) (excl. pant)").endswith("kilde-vaeld.png"))
+        self.assertTrue(wares.image_for("Ale No. 16").endswith("refsvindinge-ale.png"))
+        self.assertTrue(wares.image_for("Limfjordsporter").endswith("limfjords-porter.png"))
+
+    def test_general_photo_does_not_leak_into_a_variant(self):
+        # A generic "Faxe Kondi Booster" is not the plain Faxe Kondi can.
+        self.assertEqual(wares.image_for("Faxe Kondi Booster"), "")
+        self.assertEqual(wares.image_for("Fyttetur Somersby"), "")
+
     def test_unknown_product_has_no_image(self):
         self.assertEqual(wares.image_for("Ukendt vare"), "")
         self.assertEqual(wares.image_for(""), "")
