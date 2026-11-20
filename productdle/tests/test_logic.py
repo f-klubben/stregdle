@@ -81,10 +81,34 @@ class CompareTest(SimpleTestCase):
         self.assertEqual(by_key["caffeine"]["value"], "34 mg")
         self.assertEqual(by_key["rooms"]["value"], "Kælder")
 
-    def test_shared_category_counts_as_correct(self):
-        other_soda = make_product(id=3, name="Fanta", price=2500, categories=["Sodavand"])
-        by_key = {c["key"]: c for c in logic.compare(self.cola, other_soda)}
+    def test_shared_category_is_partial_not_correct(self):
+        # Same single category is a full match; sharing one of several is not.
+        same = make_product(id=3, name="Fanta", categories=["Sodavand"])
+        by_key = {c["key"]: c for c in logic.compare(self.cola, same)}
         self.assertEqual(by_key["category"]["status"], "correct")
+
+        wider = make_product(id=4, name="Cola & Fanta", categories=["Sodavand", "Øl"])
+        by_key = {c["key"]: c for c in logic.compare(self.cola, wider)}
+        self.assertEqual(by_key["category"]["status"], "partial")
+
+    def test_rooms_follow_the_same_rule(self):
+        two_rooms = make_product(id=5, name="Begge", rooms=["Kælder", "Stuen"])
+        by_key = {c["key"]: c for c in logic.compare(self.cola, two_rooms)}
+        self.assertEqual(by_key["rooms"]["status"], "partial")
+
+        same_room = make_product(id=6, name="Kælder", rooms=["Kælder"])
+        by_key = {c["key"]: c for c in logic.compare(self.cola, same_room)}
+        self.assertEqual(by_key["rooms"]["status"], "correct")
+
+        other_room = make_product(id=7, name="Stuen", rooms=["Stuen"])
+        by_key = {c["key"]: c for c in logic.compare(self.cola, other_room)}
+        self.assertEqual(by_key["rooms"]["status"], "wrong")
+
+    def test_empty_sets_match_each_other(self):
+        bare = make_product(id=8, name="Gaffel", categories=(), rooms=())
+        by_key = {c["key"]: c for c in logic.compare(bare, bare)}
+        self.assertEqual(by_key["category"]["status"], "correct")
+        self.assertEqual(by_key["rooms"]["status"], "correct")
 
     def test_sales_within_two_are_correct(self):
         # 3 sales in the window is 1/month, 6 sales is 2/month: within tolerance.

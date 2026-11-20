@@ -140,9 +140,10 @@ def _status(guess, target, key) -> str:
         return "low" if g < t else "high"
     if key in ("category", "rooms"):
         g, t = _set_members(guess, key), _set_members(target, key)
-        # Any shared member is a hit; identical (including both empty) matches too,
-        # so the answer always shows as fully correct when revealed.
-        return "correct" if g == t or (g & t) else "wrong"
+        if g == t:
+            return "correct"
+        # Yellow when only some of the guessed categories/rooms are in the answer.
+        return "partial" if (g & t) else "wrong"
     return "wrong"
 
 
@@ -155,7 +156,8 @@ def compare(guess, target):
     Status values:
       correct - the attribute matches the target
       high/low - the guess is above/below the target (shown as text)
-      wrong   - no connection (used for categories/rooms)
+      partial - some of the guessed categories/rooms are in the target
+      wrong   - no connection
     """
     return [
         {
