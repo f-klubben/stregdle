@@ -1,0 +1,29 @@
+[Unit]
+Description=Stregsystemdle (F-Klub stregsystem guessing game)
+After=network-online.target mariadb.service mysql.service
+Wants=network-online.target
+
+[Service]
+User=stregdle
+Group=stregdle
+WorkingDirectory=/data/stregdle
+EnvironmentFile=/data/stregdle/stregdle.env
+ExecStart=/data/stregdle/venv/bin/gunicorn stregdle.wsgi:application \
+    --bind 127.0.0.1:8001 \
+    --workers 3 \
+    --timeout 30 \
+    --access-logfile - \
+    --error-logfile -
+Restart=on-failure
+RestartSec=3
+
+# ProtectSystem=strict makes the checkout read-only; keep Python from trying to
+# write __pycache__ next to it.
+Environment=PYTHONDONTWRITEBYTECODE=1
+
+# The app only reads the shop database and writes nothing itself.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/data/stregdle/staticfiles

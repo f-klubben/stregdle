@@ -62,20 +62,66 @@ at most once a minute per worker regardless of how many people play.
 uv sync                                  # or: python -m venv .venv && pip install -e .
 python manage.py dbcheck                 # verify the SQL against the database
 python manage.py runserver               # development
-python manage.py collectstatic --noinput # production: then serve staticfiles/
 ```
 
-In production, run `stregdle.wsgi:application` behind gunicorn/uwsgi and let the
-reverse proxy serve `/static/` from `staticfiles/`. Set `STREGDLE_HTTPS=1` and
-`STREGDLE_SECRET_KEY` there, and make the proxy send `X-Forwarded-Proto`:
+## Deploying
+
+The game follows the stregsystem's own layout: a checkout under `/data`, its own
+virtualenv, gunicorn on a local port, systemd for the process and nginx for TLS
+and `/static/`. `deploy/` holds the three files used below. Adjust the paths,
+the user, the port and the host name if they differ on the server.
 
 ```sh
-STREGDLE_HTTPS=1 STREGDLE_ALLOWED_HOSTS=stregdle.fklub.dk \
-STREGDLE_SECRET_KEY=... python manage.py check --deploy
+# 1. Account and checkout
+sudo useradd --system --home /data/stregdle --shell /usr/sbin/nologin stregdle
+sudo -u stregdle git clone <repo-url> /data/stregdle
+cd /data/stregdle
+
+# 2. Virtualenv with the app and gunicorn (Python 3.11, like production)
+sudo -u stregdle python3.11 -m venv venv
+sudo -u stregdle venv/bin/pip install --upgrade pip
+sudo -u stregdle venv/bin/pip install '.[prod]'
+
+# 3. Configuration
+sudo -u stregdle cp deploy/stregdle.env.example stregdle.env
+sudo -u stregdle chmod 600 stregdle.env
+sudo -u stregdle "$EDITOR" stregdle.env        # secret key, host name, DB password
+set -a; . ./stregdle.env; set +a
+
+# 4. Check the database and the photos, then build the static files
+sudo -u stregdle venv/bin/python manage.py dbcheck
+sudo -u stregdle venv/bin/python manage.py wares
+sudo -u stregdle venv/bin/python manage.py check --deploy
+sudo -u stregdle venv/bin/python manage.py collectstatic --noinput
+
+# 5. Service
+sudo cp deploy/stregdle.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now stregdle
+curl -s http://127.0.0.1:8001/healthz        # {"status": "ok"}
+
+# 6. nginx
+sudo cp deploy/nginx.conf /etc/nginx/sites-available/stregdle
+sudo ln -s /etc/nginx/sites-available/stregdle /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
-That check is clean with the production environment set; leave `STREGDLE_HTTPS`
-off for local runs so plain HTTP works.
+`manage.py check --deploy` must report no issues before you start the service;
+it flags a weak secret key and missing HTTPS settings. Note that `collectstatic`
+has to run again whenever the ware photos change.
+
+Updating:
+
+```sh
+cd /data/stregdle
+sudo -u stregdle git pull --ff-only
+sudo -u stregdle venv/bin/pip install '.[prod]'
+sudo -u stregdle venv/bin/python manage.py collectstatic --noinput
+sudo systemctl restart stregdle
+```
+
+The app writes nothing itself - only `staticfiles/`, and only during
+`collectstatic` - so the only persistent state on the host is the checkout.
 
 ## The game rules
 
