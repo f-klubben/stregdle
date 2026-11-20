@@ -5,6 +5,7 @@ import logging
 from django.conf import settings
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.utils import timezone
 from django.views.decorators.http import require_GET
 
 from . import logic, wares
@@ -19,7 +20,11 @@ def index(request):
     return render(
         request,
         "productdle/index.html",
-        {"stregsystem_url": settings.STREGSYSTEM_URL, "source_url": settings.SOURCE_URL},
+        {
+            "stregsystem_url": settings.STREGSYSTEM_URL,
+            "source_url": settings.SOURCE_URL,
+            "today": timezone.localdate().isoformat(),
+        },
     )
 
 

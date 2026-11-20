@@ -28,6 +28,10 @@ class ViewTest(SimpleTestCase):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Stregsystemdle")
+        # The share button and the date it puts in the message.
+        self.assertContains(response, 'id="shareBtn"')
+        self.assertContains(response, 'var TODAY = "')
+        self.assertContains(response, """SQUARES = { correct: '\\uD83D\\uDFE9'""")
 
     def test_healthz_is_cheap_and_ok(self):
         # No database access: the pool is not even consulted on this path.
