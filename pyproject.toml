@@ -1,0 +1,38 @@
+[project]
+name = "stregdle"
+version = "0.1.0"
+description = "Stregsystemdle - a daily product guessing game for the F-Klub stregsystem"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "Django>=5.2,<6.0",
+    "PyMySQL>=1.1",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = [
+    "stregdle",
+    "productdle",
+    "productdle.*",
+]
+
+[tool.setuptools.package-data]
+productdle = [
+    "templates/productdle/*.html",
+    "static/productdle/*",
+]
+
+[dependency-groups]
+dev = [
+    "black>=24.0",
+    "sqlglot>=25.0",
+]
+
+[tool.black]
+target-version = ["py311"]
+line-length = 120
+skip-string-normalization = true
