@@ -62,7 +62,8 @@ SEPARATOR_RE = re.compile(r"[^0-9a-zæøå]+")
 DISQUALIFIERS = {
     "faxe-kondi.png": ["booster"],
     "somersby-apple.png": ["fyttetur"],
-    "cocio.png": ["kaffe"],
+    "cocio.png": ["kaffe", "fyttetur"],
+    "kilde-vaeld.png": ["blandede"],
 }
 
 
