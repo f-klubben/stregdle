@@ -67,9 +67,10 @@ python manage.py runserver               # development
 ## Deploying
 
 The game follows the stregsystem's own layout: a checkout under `/data`, its own
-virtualenv, gunicorn on a local port, systemd for the process and nginx for TLS
-and `/static/`. `deploy/` holds the three files used below. Adjust the paths,
-the user, the port and the host name if they differ on the server.
+virtualenv, gunicorn on a local port, systemd for the process, and the reverse
+proxy for TLS and `/static/` (fklub runs Caddy; `deploy/` holds a Caddy site
+block and an nginx one). Adjust the paths, the user, the port and the host name
+if they differ on the server.
 
 ```sh
 # 1. Account and checkout
@@ -100,11 +101,26 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now stregdle
 curl -s http://127.0.0.1:8001/healthz        # {"status": "ok"}
 
-# 6. nginx
-sudo cp deploy/nginx.conf /etc/nginx/sites-available/stregdle
-sudo ln -s /etc/nginx/sites-available/stregdle /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
+# 6. Reverse proxy - Caddy on fklub (nginx alternative in deploy/nginx.conf)
+#    Append deploy/caddy.conf to /srv/infra/caddy/Caddyfile after taking a backup.
+sudo cp -a /srv/infra/caddy/Caddyfile /root/Caddyfile.bak-$(date +%F)
+#    ... append the site block, then:
+sudo caddy validate --config /srv/infra/caddy/Caddyfile --adapter caddyfile
+sudo caddy reload --config /srv/infra/caddy/Caddyfile --adapter caddyfile
 ```
+
+### What fklub actually runs
+
+- Ubuntu 18.04, so the virtualenv comes from `/usr/local/bin/python3.11` (3.11.9).
+- `/data/stregdle` owned by the system user `stregdle`; gunicorn on
+  `127.0.0.1:8001`, run by `stregdle.service`, as in `deploy/stregdle.service`.
+- Caddy terminates TLS for `stregdle.fklub.dk` and proxies to that port; the site
+  block is the one in `deploy/caddy.conf`, added to `/srv/infra/caddy/Caddyfile`.
+  Caddy issues and renews the certificate itself.
+- The read-only MySQL account was created with the server's admin credentials:
+  `sudo mysql --defaults-file=/etc/mysql/debian.cnf -e "CREATE USER ... /* SELECT only */"`.
+- Static files: `collectstatic` writes `/data/stregdle/staticfiles`, which Caddy
+  serves under `/static/` with a 30 day cache.
 
 `manage.py check --deploy` must report no issues before you start the service;
 it flags a weak secret key and missing HTTPS settings. Note that `collectstatic`
