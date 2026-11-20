@@ -16,7 +16,11 @@ SEARCH_LIMIT = 10
 
 
 def index(request):
-    return render(request, "productdle/index.html", {"stregsystem_url": settings.STREGSYSTEM_URL})
+    return render(
+        request,
+        "productdle/index.html",
+        {"stregsystem_url": settings.STREGSYSTEM_URL, "source_url": settings.SOURCE_URL},
+    )
 
 
 def _products():

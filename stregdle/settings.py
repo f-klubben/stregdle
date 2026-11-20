@@ -56,6 +56,9 @@ ALLOWED_HOSTS = [h for h in _env("STREGDLE_ALLOWED_HOSTS", "localhost,127.0.0.1"
 # Where the "Menu"/"Genstart" buttons in the header point: the real stregsystem.
 STREGSYSTEM_URL = _env("STREGSYSTEM_URL", "http://localhost:8000/")
 
+# Link for "Se koden" in the footer. Hidden when unset.
+SOURCE_URL = _env("STREGDLE_SOURCE_URL", "")
+
 # Read-only access to the stregsystem database. Use a MySQL user that only has
 # SELECT rights on the stregsystem schema.
 STREG_DB = {

@@ -46,6 +46,7 @@ Everything is set through environment variables:
 | `STREG_DB_USER`        | `stregdle`                     | Read-only user                                   |
 | `STREG_DB_PASSWORD`    | (empty)                        | Password                                         |
 | `STREGSYSTEM_URL`      | `http://localhost:8000/`       | Where the header's Menu/Genstart buttons point   |
+| `STREGDLE_SOURCE_URL`  | (unset)                        | Source link in the footer; omitted when unset    |
 | `STREGDLE_SECRET_KEY`  | dev key                        | Set a real one in production                     |
 | `STREGDLE_ALLOWED_HOSTS` | `localhost,127.0.0.1`        | Comma-separated host names                       |
 | `STREGDLE_HTTPS`       | (off)                          | `1` when served over HTTPS (enables redirect, HSTS and secure cookies) |

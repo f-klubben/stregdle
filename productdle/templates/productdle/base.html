@@ -26,7 +26,8 @@
 <footer>
   <ul id="footer-notes">
     <li>Skabt af Fklubben</li>
-    <li><a href="https://fklub.dk/tos">Terms of Service</a></li>
+    <li><button type="button" onclick="location.href='https://fklub.dk/tos';">Terms of Service</button></li>
+    {% if source_url %}<li><button type="button" onclick="location.href='{{ source_url }}';">Se koden</button></li>{% endif %}
   </ul>
 </footer>
 </body>
