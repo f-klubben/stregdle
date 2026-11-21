@@ -11,9 +11,7 @@ objects from ``productdle.repository``.
 from __future__ import annotations
 
 import datetime
-
 import random
-
 import re
 
 from django.utils import timezone

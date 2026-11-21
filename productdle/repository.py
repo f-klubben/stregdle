@@ -12,11 +12,9 @@ stable as long as that project's models keep their names.
 from __future__ import annotations
 
 import threading
-
 import time
 
 from dataclasses import dataclass
-
 from typing import Protocol
 
 import pymysql
