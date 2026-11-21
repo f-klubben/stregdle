@@ -80,6 +80,13 @@ class ViewTest(SimpleTestCase):
     def test_search_without_query_is_empty(self):
         self.assertEqual(self.client.get("/search/").json(), {"products": []})
 
+    def test_stale_ware_can_still_be_guessed(self):
+        repo = FakeRepository([self.cola, make_product(id=3, name="Gammel", last_sale_days=3 * 365 + 1)])
+        with mock.patch.object(views, "repository", repo):
+            data = self.client.get("/guess/", {"id": 3}).json()
+        self.assertFalse(data["won"])
+        self.assertEqual(len(data["columns"]), len(logic.COLUMNS))
+
     def test_guess_reports_direction(self):
         target = logic.daily_target(self.repo.products())
         wrong = self.beer if target.id == self.cola.id else self.cola

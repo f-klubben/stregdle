@@ -26,6 +26,8 @@ class Command(BaseCommand):
         with_category = sum(1 for p in products if p.categories)
         with_alias = sum(1 for p in products if p.alias)
         target = logic.daily_target(products)
+        if target is None:
+            raise CommandError("No product has been sold recently - the game would have no answer.")
 
         self.stdout.write(f"Products: {len(products)}")
         self.stdout.write(f"  with sales: {with_sales}")

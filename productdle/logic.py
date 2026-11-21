@@ -67,9 +67,20 @@ def total_str(total: int) -> str:
     return str(int(total))
 
 
+# Answers come from wares that have been sold within this window; an item nobody
+# has bought for years cannot be reasoned towards. Guessing stays open to all.
+ANSWER_MAX_AGE_DAYS = 3 * 365
+
+
+def answer_pool(products) -> list:
+    """The only products that can be the answer: wares sold in the last three years."""
+    return [p for p in products if p.last_sale_days is not None and p.last_sale_days <= ANSWER_MAX_AGE_DAYS]
+
+
 def daily_target(products, day=None):
     """The product of the day (deterministic per date, stable for that date)."""
-    if not products:
+    pool = answer_pool(products)
+    if not pool:
         return None
     day = day or timezone.localdate()
     key = day.isoformat()
@@ -81,7 +92,7 @@ def daily_target(products, day=None):
                 return product
 
     rng = random.Random(f"{SEED_PREFIX}-{key}")
-    target = rng.choice(list(products))
+    target = rng.choice(pool)
     _target_cache.clear()
     _target_cache[key] = target.id
     return target

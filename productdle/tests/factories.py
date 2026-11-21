@@ -14,7 +14,7 @@ def make_product(
     alias="",
     sales_window=0,
     total_sales=0,
-    last_sale_days=None,
+    last_sale_days=0,
 ):
     return Product(
         id=id,

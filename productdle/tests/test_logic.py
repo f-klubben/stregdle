@@ -40,6 +40,35 @@ class DailyTargetTest(SimpleTestCase):
         reordered = list(reversed(self.products))
         self.assertEqual(logic.daily_target(reordered).id, first.id)
 
+    def test_pool_is_the_wares_sold_within_three_years(self):
+        products = [
+            make_product(id=1, name="Cola", last_sale_days=0),
+            make_product(id=2, name="Fanta", last_sale_days=3 * 365),
+            make_product(id=3, name="Gammel", last_sale_days=3 * 365 + 1),
+            make_product(id=4, name="Aldrig", last_sale_days=None),
+        ]
+        self.assertEqual([p.id for p in logic.answer_pool(products)], [1, 2])
+
+    def test_target_is_never_an_unsold_ware(self):
+        products = [
+            make_product(id=1, name="Cola", last_sale_days=0),
+            make_product(id=2, name="Gammel", last_sale_days=3 * 365 + 1),
+            make_product(id=3, name="Aldrig", last_sale_days=None),
+        ]
+        start = datetime.date(2026, 1, 1)
+        for offset in range(400):
+            logic._target_cache.clear()
+            target = logic.daily_target(products, start + datetime.timedelta(days=offset))
+            self.assertEqual(target.id, 1)
+
+    def test_no_answer_when_nothing_was_sold_recently(self):
+        products = [
+            make_product(id=2, name="Gammel", last_sale_days=3 * 365 + 1),
+            make_product(id=3, name="Aldrig", last_sale_days=None),
+        ]
+        self.assertEqual(logic.answer_pool(products), [])
+        self.assertIsNone(logic.daily_target(products, datetime.date(2026, 1, 1)))
+
 
 class CompareTest(SimpleTestCase):
     def setUp(self):
@@ -156,7 +185,7 @@ class NamedAndLastSaleTest(SimpleTestCase):
         self.assertEqual(by_key["last_sale"]["status"], "high")
 
     def test_never_sold_products(self):
-        never = make_product(id=1, name="Ny vare")
+        never = make_product(id=1, name="Ny vare", last_sale_days=None)
         sold = make_product(id=2, name="Cola", last_sale_days=5)
 
         by_key = {c["key"]: c for c in logic.compare(never, never)}
