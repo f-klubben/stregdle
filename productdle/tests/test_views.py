@@ -52,6 +52,10 @@ class ViewTest(SimpleTestCase):
         self.assertContains(response, "encodeURIComponent(PLAYER)")
         self.assertContains(response, "var PLAYER_KEY = 'stregdle:player';")
 
+    def test_board_scrolls_inside_its_block(self):
+        response = self.client.get("/")
+        self.assertEqual(response.content.decode().count('class="sdl-scroll"'), 2)
+
     def test_healthz_is_cheap_and_ok(self):
         # No database access: the pool is not even consulted on this path.
         with mock.patch.object(self.repo, "products", side_effect=AssertionError("db touched")):

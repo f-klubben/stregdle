@@ -8,6 +8,7 @@
   /* Game-specific styles; the page otherwise reuses the stregsystem chrome. */
   .sdl-wrap { max-width: 1040px; margin: 1em auto; padding: 0 1em; }
   .sdl-status { text-align: center; font-weight: bold; margin: 0 0 .4em; min-height: 1.6em; }
+  #attempts { white-space: nowrap; }
   .sdl-instructions { display: inline-block; text-align: initial; margin-bottom: .6em; }
   .sdl-instructions > p { font-weight: bold; text-align: center; margin-top: 0; margin-bottom: .3em; }
   .sdl-instructions ol { font-weight: bold; margin-top: .2em; }
@@ -20,10 +21,16 @@
   .sdl-legend .c { background: #5f8f5b; color: #fff; }
   .sdl-legend .a { background: #d2a51c; color: #fff; }
   .sdl-legend .w { background: #a0a0a0; color: #fff; }
-  .sdl-control { display: flex; gap: .5em; justify-content: center; margin-bottom: 1em; }
-  .sdl-control input { width: 26em; }
+  .sdl-control { display: flex; flex-wrap: wrap; gap: .5em; justify-content: center; margin-bottom: 1em; }
+  .sdl-control input { width: 26em; min-width: 0; }
   .sdl-control .guess { background: #cf1020; color: #fff; }
-  .sdl-block { margin-bottom: 1em; }
+  .sdl-block { position: relative; margin-bottom: 1em; }
+  .sdl-block::after {
+    content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 2.5em;
+    background: linear-gradient(to right, rgba(255, 255, 255, 0), #fff);
+    pointer-events: none;
+  }
+  .sdl-block:not(.scrollable)::after, .sdl-block.at-end::after { display: none; }
   table.sdl-table { width: 100%; margin: 0 auto; }
   table.sdl-table th, table.sdl-table td { padding: 7px 8px; text-align: center; }
   table.sdl-table th:first-child, table.sdl-table td:first-child { text-align: left; }
@@ -39,6 +46,19 @@
   .sdl-hint { color: #666; font-style: italic; text-align: center; }
   .sdl-share { text-align: center; margin-top: 1em; }
   #shareText { width: 100%; max-width: 32em; margin-top: .5em; font-family: monospace; }
+  .sdl-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table.sdl-table th, table.sdl-table td:not(:first-child) { white-space: nowrap; }
+  table.sdl-table th:first-child,
+  table.sdl-table tbody tr:not(#empty-row) > td:first-child {
+    position: sticky; left: 0; z-index: 1; background: #fff;
+  }
+  table.sdl-table tbody tr.sdl-res:hover > td:first-child,
+  table.sdl-table tbody tr.sdl-res.hover > td:first-child { background: #fff4d6; }
+  @media (max-width: 900px) {
+    .sdl-wrap { padding: 0 .4em; }
+    .sdl-control input { flex: 1 1 100%; width: auto; }
+    table.sdl-table th, table.sdl-table td { padding: 5px 4px; font-size: .78rem; }
+  }
 </style>
 {% endblock %}
 
@@ -66,30 +86,34 @@
 
   <!-- Search results: same columns/format as the guess board. -->
   <div class="sdl-block" id="resultsBlock" style="display:none;">
-    <table class="default sdl-table">
-      <thead>
-        <tr>
-          <th>Produkt</th>
-          {% for column in columns %}<th>{{ column.label }}</th>{% endfor %}
-        </tr>
-      </thead>
-      <tbody id="resultsRows"></tbody>
-    </table>
+    <div class="sdl-scroll">
+      <table class="default sdl-table">
+        <thead>
+          <tr>
+            <th>Produkt</th>
+            {% for column in columns %}<th>{{ column.label }}</th>{% endfor %}
+          </tr>
+        </thead>
+        <tbody id="resultsRows"></tbody>
+      </table>
+    </div>
   </div>
 
   <!-- The guess board; newest guess at the top. -->
   <div class="sdl-block">
-    <table class="default sdl-table">
-      <thead>
-        <tr>
-          <th>Produkt</th>
-          {% for column in columns %}<th>{{ column.label }}</th>{% endfor %}
-        </tr>
-      </thead>
-      <tbody id="rows">
-        <tr id="empty-row"><td colspan="{{ columns|length|add:1 }}"><p class="sdl-hint">Endnu ingen gæt.</p></td></tr>
-      </tbody>
-    </table>
+    <div class="sdl-scroll">
+      <table class="default sdl-table">
+        <thead>
+          <tr>
+            <th>Produkt</th>
+            {% for column in columns %}<th>{{ column.label }}</th>{% endfor %}
+          </tr>
+        </thead>
+        <tbody id="rows">
+          <tr id="empty-row"><td colspan="{{ columns|length|add:1 }}"><p class="sdl-hint">Endnu ingen gæt.</p></td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <div class="sdl-legend">
@@ -197,6 +221,7 @@
     if (!isAnswer) guesses.push(columns.map(function (c) { return c.status; }));
     board.push({ name: name, alias: alias, image: image, columns: columns, isAnswer: !!isAnswer });
     save();
+    updateScrollCues();
   }
 
   // Search results render as rows identical to guessed rows, neutral + clickable.
@@ -216,9 +241,25 @@
       resultsRows.appendChild(tr);
     });
     resultsBlock.style.display = products.length ? 'block' : 'none';
+    updateScrollCues();
   }
 
   function hideResults() { resultsBlock.style.display = 'none'; }
+
+  function updateScrollCues() {
+    Array.prototype.forEach.call(document.querySelectorAll('.sdl-block'), function (block) {
+      var scroller = block.querySelector('.sdl-scroll');
+      if (!scroller) return;
+      var scrollable = scroller.scrollWidth > scroller.clientWidth + 1;
+      block.classList.toggle('scrollable', scrollable);
+      block.classList.toggle('at-end', scrollable && scroller.scrollLeft + scroller.clientWidth >= scroller.scrollWidth - 1);
+    });
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('.sdl-scroll'), function (el) {
+    el.addEventListener('scroll', updateScrollCues);
+  });
+  window.addEventListener('resize', updateScrollCues);
 
   // Random, browser-local id: lets the statistics page count players.
   function playerId() {
@@ -416,6 +457,7 @@
 
   var PLAYER = playerId();
   restore();
+  updateScrollCues();
   input.focus();
 })();
 </script>
