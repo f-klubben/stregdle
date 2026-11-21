@@ -167,7 +167,9 @@ def _status(guess, target, key) -> str:
         return "correct" if _field_value(guess, key) == _field_value(target, key) else "wrong"
     if key == "sales":
         g, t = _field_value(guess, key), _field_value(target, key)
-        if abs(g - t) < 2.0:
+        # Green must mean the number shown to the player matches; a tolerance
+        # made 0 and 1 sales a month both green.
+        if sales_str(g) == sales_str(t):
             return "correct"
         return "low" if g < t else "high"
     if key in ("category", "rooms"):

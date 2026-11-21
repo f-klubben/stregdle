@@ -193,8 +193,9 @@ One product is the answer each day. The picks are deterministic per date (seeded
 `stregdle-<date>`), the same seed the in-app version used, so moving the game
 here did not change the answer of the day. Guesses are compared attribute by
 attribute: ID, price, alcohol, sales, total and last sale are directional
-("higher" / "lower"), an exactly matching category or room set is green and a
-partial overlap yellow, and the short-name column is a yes/no match.
+("higher" / "lower"), sales is green only when the shown whole number matches,
+an exactly matching category or room set is green and a partial overlap yellow,
+and the short-name column is a yes/no match.
 
 ## Ware photos
 

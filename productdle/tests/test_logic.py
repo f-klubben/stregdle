@@ -152,11 +152,19 @@ class CompareTest(SimpleTestCase):
         self.assertEqual(by_key["category"]["status"], "correct")
         self.assertEqual(by_key["rooms"]["status"], "correct")
 
-    def test_sales_within_two_are_correct(self):
-        # 3 sales in the window is 1/month, 6 sales is 2/month: within tolerance.
-        close = make_product(id=4, name="Vand", sales_window=6)
-        by_key = {c["key"]: c for c in logic.compare(self.cola, close)}
+    def test_sales_zero_is_not_green_for_one_a_month(self):
+        empty = make_product(id=4, name="Udsolgt", sales_window=0)
+        rare = make_product(id=5, name="Sjælden", sales_window=3)  # 1/month
+        by_key = {c["key"]: c for c in logic.compare(rare, empty)}
+        self.assertEqual(by_key["sales"]["status"], "high")
+        self.assertEqual(by_key["sales"]["value"], "1")
+
+    def test_sales_green_when_the_shown_number_matches(self):
+        empty = make_product(id=4, name="Udsolgt", sales_window=0)
+        almost = make_product(id=5, name="Næsten udsolgt", sales_window=1)  # 0.33/month, shown as 0
+        by_key = {c["key"]: c for c in logic.compare(almost, empty)}
         self.assertEqual(by_key["sales"]["status"], "correct")
+        self.assertEqual(by_key["sales"]["value"], "0")
 
     def test_empty_category_and_rooms_render_as_dash(self):
         bare = make_product(id=5, name="Gaffel", categories=(), rooms=())
