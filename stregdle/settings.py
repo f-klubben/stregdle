@@ -59,6 +59,9 @@ STREGSYSTEM_URL = _env("STREGSYSTEM_URL", "http://localhost:8000/")
 # Link for "Se koden" in the footer. Hidden when unset.
 SOURCE_URL = _env("STREGDLE_SOURCE_URL", "")
 
+# Where the day's guesses are appended; empty disables the tally.
+STREGDLE_STATS_DIR = _env("STREGDLE_STATS_DIR", str(BASE_DIR / "var"))
+
 # Read-only access to the stregsystem database. Use a MySQL user that only has
 # SELECT rights on the stregsystem schema.
 STREG_DB = {
@@ -104,7 +107,7 @@ TIME_ZONE = "Europe/Copenhagen"
 USE_I18N = False
 USE_TZ = True
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

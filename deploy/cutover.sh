@@ -10,6 +10,7 @@ logger -t stregdle-cutover "starting cutover in /data/stregdle"
 cd /data/stregdle
 sudo -u stregdle git pull --ff-only
 sudo -u stregdle ./venv/bin/python -m pip install --quiet '.[prod]'
+sudo install -d -o stregdle -g stregdle /data/stregdle/var
 sudo -u stregdle ./venv/bin/python manage.py collectstatic --noinput
 systemctl restart stregdle
 sleep 3

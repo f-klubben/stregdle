@@ -16,12 +16,12 @@ RestartSec=3
 # write __pycache__ next to it.
 Environment=PYTHONDONTWRITEBYTECODE=1
 
-# The app only reads the shop database and writes nothing itself.
+# The app reads the shop database and writes only the guess tally.
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/data/stregdle/staticfiles
+ReadWritePaths=/data/stregdle/staticfiles /data/stregdle/var
 
 [Install]
 WantedBy=multi-user.target

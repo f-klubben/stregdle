@@ -47,6 +47,7 @@ Everything is set through environment variables:
 | `STREG_DB_PASSWORD`    | (empty)                        | Password                                         |
 | `STREGSYSTEM_URL`      | `http://localhost:8000/`       | Where the header's Menu/Genstart buttons point   |
 | `STREGDLE_SOURCE_URL`  | (unset)                        | Source link in the footer; omitted when unset    |
+| `STREGDLE_STATS_DIR`   | `<checkout>/var`               | Where the day's guess tally is written; empty disables it |
 | `STREGDLE_SECRET_KEY`  | dev key                        | Set a real one in production                     |
 | `STREGDLE_ALLOWED_HOSTS` | `localhost,127.0.0.1`        | Comma-separated host names                       |
 | `STREGDLE_HTTPS`       | (off)                          | `1` when served over HTTPS (enables redirect, HSTS and secure cookies) |
@@ -88,6 +89,7 @@ sudo -u stregdle cp deploy/stregdle.env.example stregdle.env
 sudo -u stregdle chmod 600 stregdle.env
 sudo -u stregdle "$EDITOR" stregdle.env        # secret key, host name, DB password
 set -a; . ./stregdle.env; set +a
+sudo install -d -o stregdle -g stregdle /data/stregdle/var
 
 # 4. Check the database and the photos, then build the static files
 sudo -u stregdle venv/bin/python manage.py dbcheck
@@ -157,8 +159,29 @@ sudo -u stregdle venv/bin/python manage.py collectstatic --noinput
 sudo systemctl restart stregdle
 ```
 
-The app writes nothing itself - only `staticfiles/`, and only during
-`collectstatic` - so the only persistent state on the host is the checkout.
+The app writes nothing itself except the guess tally in `STREGDLE_STATS_DIR`
+(and `staticfiles/`, during `collectstatic`), so the only other persistent state
+on the host is the checkout.
+
+## The statistics page
+
+`/statistics/` shows the day's game in numbers, for a screen standing next to the
+fridge: participants, total guesses, how many found the product, how many gave
+up, and the average number of attempts. Two charts break it down - attempts used
+by those who found it, and guesses per hour. It reuses the game's header and
+footer and refreshes itself every minute.
+
+It shows counts only. The answer, the guessed products and the per-guess colours
+never appear there, because the screen is public and would spoil the round for
+whoever is still playing.
+
+Counting works without sessions or a database: every guess appends one line to
+`<STREGDLE_STATS_DIR>/<date>.jsonl` (`os.write` on an `O_APPEND` file, so the
+gunicorn workers can share it), and the board aggregates that file when it
+renders. The page keeps a random id in `localStorage` and sends it along with
+its guesses, which is what makes "participants" countable; it identifies nobody
+and nothing else stores it. The files are small and can be deleted once nobody
+cares about the history; a failed write is logged and never breaks a guess.
 
 ## The game rules
 

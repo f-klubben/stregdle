@@ -123,6 +123,7 @@
   var results = []; // latest search results
   var TODAY = "{{ today }}";
   var STORE_KEY = 'stregdle:' + TODAY;
+  var PLAYER_KEY = 'stregdle:player';
   var emptyRow = document.getElementById('empty-row');
 
   var input = document.getElementById('guessInput');
@@ -219,6 +220,17 @@
 
   function hideResults() { resultsBlock.style.display = 'none'; }
 
+  // Random, browser-local id: lets the statistics page count players.
+  function playerId() {
+    var id = '';
+    try { id = localStorage.getItem(PLAYER_KEY) || ''; } catch (e) {}
+    if (!/^[a-z0-9]{8,32}$/.test(id)) {
+      id = (Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)).slice(0, 16);
+      try { localStorage.setItem(PLAYER_KEY, id); } catch (e) {}
+    }
+    return id;
+  }
+
   // The day's game lives in localStorage under its date, so a reload (or a
   // browser restart) keeps the board. Yesterday's keys are dropped on load.
   function save() {
@@ -237,7 +249,7 @@
     var saved = null;
     try {
       Object.keys(localStorage).forEach(function (key) {
-        if (key.indexOf('stregdle:') === 0 && key !== STORE_KEY) localStorage.removeItem(key);
+        if (key.indexOf('stregdle:') === 0 && key !== STORE_KEY && key !== PLAYER_KEY) localStorage.removeItem(key);
       });
       saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
     } catch (e) {
@@ -312,7 +324,7 @@
 
   function guessById(id, name) {
     if (gameOver) return;
-    fetch(GUESS_URL + '?id=' + encodeURIComponent(id))
+    fetch(GUESS_URL + '?id=' + encodeURIComponent(id) + '&p=' + encodeURIComponent(PLAYER))
       .then(function (r) { return r.json(); })
       .then(function (data) {
         if (data.error) { setResult(data.error); return; }
@@ -334,7 +346,7 @@
   }
 
   function revealAnswer() {
-    fetch(REVEAL_URL)
+    fetch(REVEAL_URL + '?p=' + encodeURIComponent(PLAYER))
       .then(function (r) { return r.json(); })
       .then(function (rev) {
         gaveUp = true;
@@ -402,6 +414,7 @@
   });
   document.getElementById('shareBtn').addEventListener('click', share);
 
+  var PLAYER = playerId();
   restore();
   input.focus();
 })();

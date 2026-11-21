@@ -1,4 +1,4 @@
-"""HTTP endpoints for the game: the page plus the three JSON calls it uses."""
+"""HTTP endpoints: the game page, the kiosk statistics page, and the JSON calls."""
 
 import logging
 
@@ -8,7 +8,7 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.http import require_GET
 
-from . import logic, wares
+from . import logic, stats, wares
 from .repository import DatabaseUnavailable, repository
 
 logger = logging.getLogger(__name__)
@@ -25,6 +25,25 @@ def index(request):
             "source_url": settings.SOURCE_URL,
             "today": timezone.localdate().isoformat(),
             "columns": logic.COLUMNS,
+        },
+    )
+
+
+@require_GET
+def statistics(request):
+    """Today's game in numbers, for the kiosk screen. Counts only, no spoilers."""
+    today = timezone.localdate()
+    return render(
+        request,
+        "productdle/statistics.html",
+        {
+            "stregsystem_url": settings.STREGSYSTEM_URL,
+            "source_url": settings.SOURCE_URL,
+            "today": today.isoformat(),
+            "day": today,
+            "stats": stats.summary(today),
+            "yesterday": stats.yesterday(today),
+            "updated": timezone.localtime().strftime("%H:%M"),
         },
     )
 
@@ -84,11 +103,14 @@ def guess(request):
     if product is None:
         return JsonResponse({"error": "Ukendt vare."}, status=404)
 
+    won = product.id == target.id
+    stats.record_guess(request.GET.get("p"), product.id, won)
+
     return JsonResponse(
         {
             "guess": logic.product_stats(product),
             "columns": logic.compare(product, target),
-            "won": product.id == target.id,
+            "won": won,
         }
     )
 
@@ -103,6 +125,8 @@ def reveal(request):
     target = logic.daily_target(products)
     if target is None:
         return JsonResponse({"error": "Ingen varer tilgængelige lige nu."}, status=503)
+
+    stats.record_gave_up(request.GET.get("p"))
 
     return JsonResponse(
         {
