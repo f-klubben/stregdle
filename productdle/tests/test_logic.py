@@ -40,6 +40,21 @@ class DailyTargetTest(SimpleTestCase):
         reordered = list(reversed(self.products))
         self.assertEqual(logic.daily_target(reordered).id, first.id)
 
+    def test_target_does_not_depend_on_the_pool_order(self):
+        first = logic.daily_target(self.products, datetime.date(2026, 11, 11))
+        logic._target_cache.clear()
+        reordered = list(reversed(self.products))
+        self.assertEqual(logic.daily_target(reordered, datetime.date(2026, 11, 11)).id, first.id)
+
+    def test_cached_target_survives_the_pool_changing(self):
+        day = datetime.date(2026, 11, 11)
+        first = logic.daily_target(self.products, day)
+        aged = [
+            make_product(id=1, name="Cola", last_sale_days=None),
+            make_product(id=2, name="Mørk øl", last_sale_days=0),
+        ]
+        self.assertEqual(logic.daily_target(aged, day).id, first.id)
+
     def test_pool_is_the_wares_sold_within_three_years(self):
         products = [
             make_product(id=1, name="Cola", last_sale_days=0),

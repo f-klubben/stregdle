@@ -79,7 +79,7 @@ def answer_pool(products) -> list:
 
 def daily_target(products, day=None):
     """The product of the day (deterministic per date, stable for that date)."""
-    pool = answer_pool(products)
+    pool = sorted(answer_pool(products), key=lambda product: product.id)
     if not pool:
         return None
     day = day or timezone.localdate()
