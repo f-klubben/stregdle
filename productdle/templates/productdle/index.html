@@ -231,8 +231,10 @@
 
   // Search results render as rows identical to guessed rows, neutral + clickable.
   function addResultRows(products) {
+    results = products.filter(function (p) { return !alreadyGuessed(p.id, p.name); });
     resultsRows.innerHTML = '';
-    products.forEach(function (p, i) {
+    hoverIndex = -1;
+    results.forEach(function (p, i) {
       var tr = document.createElement('tr');
       tr.className = 'sdl-res';
       tr.appendChild(nameCell(p.name, p.image));
@@ -245,7 +247,7 @@
       tr.addEventListener('click', function () { guessById(p.id, p.name); });
       resultsRows.appendChild(tr);
     });
-    resultsBlock.style.display = products.length ? 'block' : 'none';
+    resultsBlock.style.display = results.length ? 'block' : 'none';
     updateScrollCues();
   }
 
@@ -465,9 +467,11 @@
         var exact = list.filter(function (p) {
           return p.name.toLowerCase() === q || (p.alias && p.alias.toLowerCase() === q) || String(p.id) === q;
         })[0];
-        if (exact) { results = list; guessById(exact.id, exact.name); }
-        else if (list.length) { results = list; addResultRows(list); setResult('Vælg en vare fra listen.'); }
-        else setResult('Ukendt vare: "' + name + '".');
+        if (exact) { addResultRows(list); guessById(exact.id, exact.name); }
+        else if (list.length) {
+          addResultRows(list);
+          setResult(results.length ? 'Vælg en vare fra listen.' : 'Alle disse varer er allerede gættet.');
+        } else setResult('Ukendt vare: "' + name + '".');
       })
       .catch(failed);
   }
@@ -486,8 +490,7 @@
     getJSON(SEARCH_URL + '?q=' + encodeURIComponent(q))
       .then(function (data) {
         if (data.error) { setResult(data.error); return; }
-        results = data.products || [];
-        addResultRows(results);
+        addResultRows(data.products || []);
       })
       .catch(failed);
   }
