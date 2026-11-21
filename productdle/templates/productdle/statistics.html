@@ -1,0 +1,113 @@
+{% extends "productdle/base.html" %}
+
+{% block title %}Stregsystemdle - dagens statistik{% endblock %}
+{% block heading %}Stregsystemdle{% endblock %}
+
+{% block head %}
+<meta http-equiv="refresh" content="60">
+<style>
+  .sdl-stats { max-width: 1080px; margin: 1.5em auto 2em; padding: 0 1.5em; }
+  .sdl-day { text-align: center; font-size: 1.15em; font-weight: bold; margin: 0 0 1.2em; }
+  .sdl-day small { display: block; font-weight: normal; color: #666; margin-top: .2em; }
+
+  table.sdl-figures { width: 100%; table-layout: fixed; }
+  table.sdl-figures td { text-align: center; padding: .7em .4em; }
+  .sdl-figure { display: block; font-size: 2.8em; font-weight: bold; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .sdl-figure-label { display: block; font-size: .95em; margin-top: .2em; }
+  .sdl-figure-note { display: block; font-size: .8em; color: #666; }
+
+  .sdl-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 2em; margin-top: 2em; }
+  .sdl-panel { min-width: 0; }
+  @media (max-width: 900px) { .sdl-panels { grid-template-columns: 1fr; } }
+  .sdl-panel h2 { font-size: 1.1em; text-align: center; margin: 0 0 .6em; }
+
+  table.sdl-dist { width: 100%; }
+  table.sdl-dist th { width: 4.5em; text-align: center; font-weight: bold; }
+  table.sdl-dist td.sdl-count { width: 4em; text-align: center; font-variant-numeric: tabular-nums; }
+  table.sdl-dist td.sdl-track { padding: 5px 6px; }
+  .sdl-bar { height: 1em; background: #5f8f5b; min-width: 1px; }
+
+  .sdl-hours { display: flex; gap: 2px; height: 180px; border: 1px outset black; padding: 6px 6px 0; }
+  .sdl-hour { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .sdl-hour-track { flex: 1; display: flex; align-items: flex-end; }
+  .sdl-hour-bar { width: 100%; background: #a0a0a0; min-height: 1px; }
+  .sdl-hour-label { font-size: .7em; text-align: center; height: 1.4em; line-height: 1.4em; color: #444; }
+  .sdl-caption { text-align: center; color: #666; font-size: .85em; margin: .6em 0 0; }
+
+  .sdl-foot { text-align: center; margin-top: 2.2em; color: #666; font-size: .9em; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sdl-stats">
+  <p class="sdl-day">
+    I dag, {{ day|date:"l j. F" }}
+    {% if not stats.guesses %}<small>Ingen gæt endnu - vær den første.</small>{% endif %}
+  </p>
+
+  <table class="default sdl-figures">
+    <tr>
+      <td>
+        <span class="sdl-figure">{{ stats.players }}</span>
+        <span class="sdl-figure-label">deltagere</span>
+      </td>
+      <td>
+        <span class="sdl-figure">{{ stats.guesses }}</span>
+        <span class="sdl-figure-label">gæt i alt</span>
+      </td>
+      <td>
+        <span class="sdl-figure">{{ stats.solvers }}</span>
+        <span class="sdl-figure-label">klaret den</span>
+        <span class="sdl-figure-note">{{ stats.solved_pct }} % af deltagerne</span>
+      </td>
+      <td>
+        <span class="sdl-figure">{{ stats.gave_up }}</span>
+        <span class="sdl-figure-label">gav op</span>
+      </td>
+      <td>
+        <span class="sdl-figure">{% if stats.average %}{{ stats.average|floatformat:1 }}{% else %}-{% endif %}</span>
+        <span class="sdl-figure-label">gns. forsøg</span>
+      </td>
+    </tr>
+  </table>
+
+  <div class="sdl-panels">
+    <section class="sdl-panel">
+      <h2>Forsøg for dem, der løste den</h2>
+      <table class="default sdl-dist">
+        <tbody>
+          {% for row in stats.distribution %}
+          <tr>
+            <th>{{ row.label }}</th>
+            <td class="sdl-track">
+              {% if row.pct %}<div class="sdl-bar" style="width:{{ row.pct }}%"></div>{% endif %}
+            </td>
+            <td class="sdl-count">{{ row.players }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="sdl-panel">
+      <h2>Gæt gennem dagen</h2>
+      <div class="sdl-hours">
+        {% for hour in stats.hours %}
+        <div class="sdl-hour" title="kl. {{ hour.hour }}: {{ hour.guesses }} gæt">
+          <div class="sdl-hour-track">
+            {% if hour.guesses %}<div class="sdl-hour-bar" style="height:{{ hour.pct }}%"></div>{% endif %}
+          </div>
+          <span class="sdl-hour-label">{{ hour.label }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      <p class="sdl-caption">Antal gæt pr. time. Den travleste time har fuld højde.</p>
+    </section>
+  </div>
+
+  <p class="sdl-foot">
+    I går klarede {{ yesterday.solvers }} af {{ yesterday.players }} den.
+    Opdateret kl. {{ updated }}, opdateres automatisk hvert minut.
+  </p>
+</div>
+{% endblock %}
