@@ -51,6 +51,8 @@ class ViewTest(SimpleTestCase):
         # Guesses carry the anonymous player id the statistics page counts.
         self.assertContains(response, "encodeURIComponent(PLAYER)")
         self.assertContains(response, "var PLAYER_KEY = 'stregdle:player';")
+        # Repeat guesses are refused and never offered again.
+        self.assertContains(response, "function alreadyGuessed(id, name)")
 
     def test_guess_carries_the_server_day(self):
         target = logic.daily_target(self.repo.products())

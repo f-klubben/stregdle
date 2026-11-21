@@ -214,7 +214,7 @@
     return td;
   }
 
-  function addGuessRow(name, image, columns, isAnswer) {
+  function addGuessRow(name, image, columns, isAnswer, id) {
     if (emptyRow) { rowsBody.removeChild(emptyRow); emptyRow = null; }
     var tr = document.createElement('tr');
     tr.appendChild(nameCell(name, image, isAnswer));
@@ -223,7 +223,7 @@
     rowsBody.insertBefore(tr, rowsBody.firstChild);
     // The revealed answer is not a guess, so it stays out of the share text.
     if (!isAnswer) guesses.push(columns.map(function (c) { return c.status; }));
-    board.push({ name: name, image: image, columns: columns, isAnswer: !!isAnswer });
+    board.push({ id: id, name: name, image: image, columns: columns, isAnswer: !!isAnswer });
     save();
     updateScrollCues();
   }
@@ -241,7 +241,7 @@
         tr.appendChild(c);
       });
       tr.addEventListener('mouseenter', function () { hover(i); });
-      tr.addEventListener('click', function () { guessById(p.id); });
+      tr.addEventListener('click', function () { guessById(p.id, p.name); });
       resultsRows.appendChild(tr);
     });
     resultsBlock.style.display = products.length ? 'block' : 'none';
@@ -336,7 +336,7 @@
 
     restoring = true;
     saved.board.forEach(function (row) {
-      addGuessRow(row.name, row.image, row.columns, row.isAnswer);
+      addGuessRow(row.name, row.image, row.columns, row.isAnswer, row.id);
     });
     attempts = saved.attempts || guesses.length;
     won = !!saved.won;
@@ -393,8 +393,19 @@
     else showIt();
   }
 
-  function guessById(id) {
+  function alreadyGuessed(id, name) {
+    return board.some(function (row) {
+      return !row.isAnswer && (String(row.id) === String(id) || (name && row.name === name));
+    });
+  }
+
+  function guessById(id, name) {
     if (gameOver || busy) return;
+    if (alreadyGuessed(id, name)) {
+      setResult('Du har allerede gættet på denne vare.');
+      hideResults();
+      return;
+    }
     busy = true;
     getJSON(GUESS_URL + '?id=' + encodeURIComponent(id) + '&p=' + encodeURIComponent(PLAYER))
       .then(function (data) {
@@ -402,7 +413,7 @@
         if (data.error) { setResult(data.error); return; }
         adoptDay(data.today);
         hideResults();
-        addGuessRow(data.guess.name, data.guess.image, data.columns);
+        addGuessRow(data.guess.name, data.guess.image, data.columns, false, data.guess.id);
         attempts++;
         setAttempts();
         save();
@@ -443,7 +454,7 @@
     var hit = results.filter(function (p) {
       return p.name.toLowerCase() === q || (p.alias && p.alias.toLowerCase() === q) || String(p.id) === q;
     })[0];
-    if (hit) { guessById(hit.id); return; }
+    if (hit) { guessById(hit.id, hit.name); return; }
     // Fallback: resolve against the server (matches name, alias or plain ID).
     getJSON(SEARCH_URL + '?q=' + encodeURIComponent(name))
       .then(function (data) {
@@ -452,7 +463,7 @@
         var exact = list.filter(function (p) {
           return p.name.toLowerCase() === q || (p.alias && p.alias.toLowerCase() === q) || String(p.id) === q;
         })[0] || list[0];
-        if (exact) { results = list; guessById(exact.id); }
+        if (exact) { results = list; guessById(exact.id, exact.name); }
         else setResult('Ukendt vare: "' + name + '".');
       })
       .catch(failed);
