@@ -145,6 +145,7 @@
   var board = []; // every row on screen, so a reload can rebuild it
   var restoring = false;
   var busy = false;
+  var hoverIndex = -1;
   var results = []; // latest search results
   var TODAY = "{{ today }}";
   var STORE_KEY = 'stregdle:' + TODAY;
@@ -406,6 +407,7 @@
       hideResults();
       return;
     }
+    clearTimeout(debounce);
     busy = true;
     getJSON(GUESS_URL + '?id=' + encodeURIComponent(id) + '&p=' + encodeURIComponent(PLAYER))
       .then(function (data) {
@@ -462,14 +464,14 @@
         var list = data.products || [];
         var exact = list.filter(function (p) {
           return p.name.toLowerCase() === q || (p.alias && p.alias.toLowerCase() === q) || String(p.id) === q;
-        })[0] || list[0];
+        })[0];
         if (exact) { results = list; guessById(exact.id, exact.name); }
+        else if (list.length) { results = list; addResultRows(list); setResult('Vælg en vare fra listen.'); }
         else setResult('Ukendt vare: "' + name + '".');
       })
       .catch(failed);
   }
 
-  var hoverIndex = -1;
   function hover(i) {
     hoverIndex = i;
     Array.prototype.forEach.call(resultsRows.children, function (el, j) {
@@ -496,10 +498,20 @@
     debounce = setTimeout(search, 120);
   });
   input.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') { e.preventDefault(); tryGuess(input.value); hideResults(); }
     var n = resultsRows.children.length;
-    if (e.key === 'ArrowDown' && n) { e.preventDefault(); hover((hoverIndex + 1) % n); }
-    if (e.key === 'ArrowUp' && n) { e.preventDefault(); hover((hoverIndex - 1 + n) % n); }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      var picked = resultsBlock.style.display !== 'none' ? results[hoverIndex] : null;
+      if (picked) guessById(picked.id, picked.name);
+      else tryGuess(input.value);
+      hideResults();
+    } else if (e.key === 'ArrowDown' && n) {
+      e.preventDefault();
+      hover((hoverIndex + 1) % n);
+    } else if (e.key === 'ArrowUp' && n) {
+      e.preventDefault();
+      hover((hoverIndex - 1 + n) % n);
+    }
   });
   guessBtn.addEventListener('click', function () { tryGuess(input.value); });
   giveUpBtn.addEventListener('click', revealAnswer);
