@@ -1,11 +1,11 @@
 """Pictures of the wares.
 
 Each entry pairs a photo in ``static/productdle/wares/`` with the ways a product
-in the shop can be named ("Tuborg Grøn", "Tuborg Grøn Pilsner", ...). A product
-gets a picture when its name, with markup, casing and punctuation ignored,
-equals one of those names or starts with one of them. When several names fit,
-the longest one wins, so "Faxe Kondi Booster Melon Boost" is not given the plain
-"Faxe Kondi" photo.
+in the shop can be named ("Tuborg Grøn", "Tuborg Grøn Pilsner", ...). Matching
+ignores markup, casing, accents and punctuation, and the ware's name may sit
+anywhere inside the product's name. When several names fit, the longest one
+wins, so "Faxe Kondi Booster Melon Boost" is not given the plain "Faxe Kondi"
+photo.
 
 The product names live in the stregsystem database, so add an alias here
 whenever a ware is renamed. ``manage.py wares`` lists the products it could not
