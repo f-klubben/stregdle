@@ -80,6 +80,15 @@ class StatsTest(SimpleTestCase):
         self.assertEqual(summary["solved_pct"], 0)
         self.assertEqual(self.events()[0]["p"], "")
 
+    def test_anonymous_wins_cannot_push_the_percentage_over_100(self):
+        stats.record_guess("aaaaaaaa11", 1, False, day=DAY)
+        for _ in range(3):
+            stats.record_guess(None, 1, True, day=DAY)
+        summary = stats.summary(DAY)
+        self.assertEqual(summary["players"], 1)
+        self.assertEqual(summary["solvers"], 3)
+        self.assertEqual(summary["solved_pct"], 100)
+
     def test_a_dead_player_id_is_ignored(self):
         self.assertIsNone(stats.valid_player("../../etc/passwd"))
         self.assertIsNone(stats.valid_player(""))

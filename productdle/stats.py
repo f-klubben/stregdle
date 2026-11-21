@@ -8,13 +8,9 @@ single ``os.write`` on an O_APPEND handle; failures are logged, never raised.
 from __future__ import annotations
 
 import datetime
-
 import json
-
 import logging
-
 import os
-
 import re
 
 from pathlib import Path
@@ -139,6 +135,7 @@ def summary(day=None) -> dict:
     events = _events(day)
 
     guesses = 0
+    players: set = set()
     solved: dict = {}  # player -> attempt number of their first win
     anonymous_wins = 0
     gave_up: set = set()
@@ -159,6 +156,7 @@ def summary(day=None) -> dict:
             if event.get("won"):
                 anonymous_wins += 1
             continue
+        players.add(player)
         try:
             attempt = max(1, int(event.get("a") or 1))
         except (TypeError, ValueError):
@@ -166,8 +164,8 @@ def summary(day=None) -> dict:
         if event.get("won"):
             solved[player] = min(solved.get(player, attempt), attempt)
 
-    players = len(guess_counts(events))
     solvers = len(solved) + anonymous_wins
+    player_count = len(players)
     attempts = list(solved.values())
     average = sum(attempts) / len(attempts) if attempts else None
 
@@ -196,10 +194,12 @@ def summary(day=None) -> dict:
     ]
 
     return {
-        "players": players,
+        "players": player_count,
         "guesses": guesses,
         "solvers": solvers,
-        "solved_pct": round(solvers * 100 / players) if players else 0,
+        # Anonymous wins cannot be matched to a participant, so solvers may
+        # outnumber players; the percentage must not exceed 100.
+        "solved_pct": min(100, round(solvers * 100 / player_count)) if player_count else 0,
         "gave_up": len(gave_up - solved.keys()),
         "average": average,
         "distribution": distribution,
