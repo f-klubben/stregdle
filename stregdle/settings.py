@@ -104,7 +104,7 @@ DATABASES = {}
 
 LANGUAGE_CODE = "da-dk"
 TIME_ZONE = "Europe/Copenhagen"
-USE_I18N = False
+USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "/static/"

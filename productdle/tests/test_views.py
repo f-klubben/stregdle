@@ -131,6 +131,11 @@ class ViewTest(SimpleTestCase):
         self.assertContains(response, 'http-equiv="refresh"')
         self.assertContains(response, "opdateres automatisk")
 
+    def test_statistics_page_names_the_day_in_danish(self):
+        page = self.client.get("/statistics/").content.decode()
+        weekdays = ("mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag", "søndag")
+        self.assertTrue(any(day in page for day in weekdays), page[page.find("I dag,") :][:40])
+
     def test_statistics_page_shows_no_answer_and_no_guessed_names(self):
         target = logic.daily_target(self.repo.products())
         response = self.client.get("/statistics/")
