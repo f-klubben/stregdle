@@ -228,7 +228,7 @@ def product_stats(product) -> dict:
     stats = {
         "id": str(product.id),
         "name": clean_name(product.name),
-        "alias": product.alias or "",
+        "alias": clean_name(product.alias or ""),
         "image": wares.image_for(product.name),
     }
     for column in COLUMNS:
@@ -257,6 +257,8 @@ def search_products(products, query: str, limit: int) -> list:
         if query_id is not None and product.id == query_id:
             matched.append(product)
             continue
-        if query_lower in product.name.casefold() or (product.alias and query_lower in product.alias.casefold()):
+        name = clean_name(product.name).casefold()
+        alias = clean_name(product.alias or "").casefold()
+        if query_lower in name or (alias and query_lower in alias):
             matched.append(product)
     return matched[:limit]

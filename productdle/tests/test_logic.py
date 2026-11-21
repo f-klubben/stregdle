@@ -272,6 +272,11 @@ class SearchTest(SimpleTestCase):
         ids = [p.id for p in logic.search_products(self.products, "8", 10)]
         self.assertEqual(ids, [8])
 
+    def test_search_ignores_markup_in_names_and_aliases(self):
+        products = [make_product(id=9, name="Cocio <b>(Mellem)</b>", alias="cocio <i>m</i>")]
+        self.assertEqual([p.id for p in logic.search_products(products, "cocio (mellem)", 10)], [9])
+        self.assertEqual([p.id for p in logic.search_products(products, "cocio m", 10)], [9])
+
     def test_empty_query_matches_nothing(self):
         self.assertEqual(logic.search_products(self.products, "  ", 10), [])
 
