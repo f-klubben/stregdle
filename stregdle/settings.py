@@ -6,7 +6,7 @@ and no ORM models exist here.
 """
 
 import os
-
+import sys
 import warnings
 
 from pathlib import Path
@@ -32,7 +32,7 @@ def _flag(name, default: bool) -> bool:
 
 SECRET_KEY = _env("STREGDLE_SECRET_KEY", DEV_SECRET_KEY)
 
-DEBUG = _flag("STREGDLE_DEBUG", False)
+DEBUG = _flag("STREGDLE_DEBUG", "runserver" in sys.argv)
 
 # Set STREGDLE_HTTPS=1 in production: the game sits behind a TLS-terminating
 # reverse proxy there (which must send X-Forwarded-Proto). Off by default so

@@ -52,7 +52,7 @@ Everything is set through environment variables:
 | `STREGDLE_ALLOWED_HOSTS` | `localhost,127.0.0.1`        | Comma-separated host names                       |
 | `STREGDLE_HTTPS`       | (off)                          | `1` when served over HTTPS (enables redirect, HSTS and secure cookies) |
 | `STREGDLE_HSTS_SECONDS` | `31536000` when HTTPS is on   | HSTS lifetime                                    |
-| `STREGDLE_DEBUG`       | (off)                          | `1` for Django debug mode                        |
+| `STREGDLE_DEBUG`       | (off; on for `runserver`)      | `1` for Django debug mode                        |
 
 Product data is cached in-process for 60 seconds, so the shop's database is read
 at most once a minute per worker regardless of how many people play.
@@ -64,6 +64,10 @@ uv sync                                  # or: python -m venv .venv && pip insta
 python manage.py dbcheck                 # verify the SQL against the database
 python manage.py runserver               # development
 ```
+
+`runserver` turns debug mode on by default, which is what makes the dev server
+serve `/static/`. Set `STREGDLE_DEBUG=0` to run it with debug off; in production
+debug stays off and Caddy serves the files from `staticfiles/`.
 
 ## Deploying
 
