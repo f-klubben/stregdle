@@ -144,6 +144,7 @@
   var guesses = []; // statuses per guess, for the shareable result
   var board = []; // every row on screen, so a reload can rebuild it
   var restoring = false;
+  var busy = false;
   var results = []; // latest search results
   var TODAY = "{{ today }}";
   var STORE_KEY = 'stregdle:' + TODAY;
@@ -158,9 +159,13 @@
   var resultsRows = document.getElementById('resultsRows');
   var shareBlock = document.getElementById('shareBlock');
   var shareText = document.getElementById('shareText');
+  var guessBtn = document.getElementById('guessBtn');
+  var giveUpBtn = document.getElementById('giveUpBtn');
 
   function setResult(m) { statusEl.textContent = m; }
   function setAttempts() { attemptsEl.textContent = 'Forsøg: ' + attempts; }
+  function getJSON(url) { return fetch(url).then(function (r) { return r.json(); }); }
+  function failed() { setResult('Der skete en fejl. Prøv igen.'); }
 
   // Column order shared by the guess board and the search table.
   var COLUMN_KEYS = [{% for column in columns %}"{{ column.key }}"{% if not forloop.last %}, {% endif %}{% endfor %}];
@@ -182,9 +187,8 @@
     return td;
   }
 
-  // Name cell: ware photo (when we have one) plus the bold name. The optional
-  // short name (alias) still resolves guesses but is not rendered here.
-  function nameCell(name, alias, image, isAnswer) {
+  // Name cell: ware photo (when we have one) plus the bold name.
+  function nameCell(name, image, isAnswer) {
     var td = document.createElement('td');
     td.style.textAlign = 'left';
     var wrap = document.createElement('span');
@@ -210,16 +214,16 @@
     return td;
   }
 
-  function addGuessRow(name, alias, image, columns, isAnswer) {
+  function addGuessRow(name, image, columns, isAnswer) {
     if (emptyRow) { rowsBody.removeChild(emptyRow); emptyRow = null; }
     var tr = document.createElement('tr');
-    tr.appendChild(nameCell(name, alias, image, isAnswer));
+    tr.appendChild(nameCell(name, image, isAnswer));
     columns.forEach(function (c) { tr.appendChild(guessCellTd(c)); });
     // Most recent guess goes to the top.
     rowsBody.insertBefore(tr, rowsBody.firstChild);
     // The revealed answer is not a guess, so it stays out of the share text.
     if (!isAnswer) guesses.push(columns.map(function (c) { return c.status; }));
-    board.push({ name: name, alias: alias, image: image, columns: columns, isAnswer: !!isAnswer });
+    board.push({ name: name, image: image, columns: columns, isAnswer: !!isAnswer });
     save();
     updateScrollCues();
   }
@@ -230,14 +234,14 @@
     products.forEach(function (p, i) {
       var tr = document.createElement('tr');
       tr.className = 'sdl-res';
-      tr.appendChild(nameCell(p.name, p.alias, p.image));
+      tr.appendChild(nameCell(p.name, p.image));
       COLUMN_KEYS.forEach(function (k) {
         var c = document.createElement('td');
         c.textContent = p[k];
         tr.appendChild(c);
       });
       tr.addEventListener('mouseenter', function () { hover(i); });
-      tr.addEventListener('click', function () { guessById(p.id, p.name); });
+      tr.addEventListener('click', function () { guessById(p.id); });
       resultsRows.appendChild(tr);
     });
     resultsBlock.style.display = products.length ? 'block' : 'none';
@@ -286,6 +290,32 @@
     }
   }
 
+  function adoptDay(day) {
+    if (!day || day === TODAY) return;
+    try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+    TODAY = day;
+    STORE_KEY = 'stregdle:' + TODAY;
+    // The page was left open past midnight: the rows on screen are yesterday's
+    // game, so start over with the new answer.
+    board = [];
+    guesses = [];
+    attempts = 0;
+    won = false;
+    gaveUp = false;
+    gameOver = false;
+    busy = false;
+    hoverIndex = -1;
+    rowsBody.innerHTML = '<tr id="empty-row"><td colspan="' + (COLUMN_KEYS.length + 1) +
+      '"><p class="sdl-hint">Endnu ingen gæt.</p></td></tr>';
+    emptyRow = document.getElementById('empty-row');
+    shareBlock.style.display = 'none';
+    shareText.style.display = 'none';
+    input.disabled = false;
+    guessBtn.disabled = false;
+    giveUpBtn.disabled = false;
+    setAttempts();
+  }
+
   function restore() {
     var saved = null;
     try {
@@ -306,7 +336,7 @@
 
     restoring = true;
     saved.board.forEach(function (row) {
-      addGuessRow(row.name, row.alias, row.image, row.columns, row.isAnswer);
+      addGuessRow(row.name, row.image, row.columns, row.isAnswer);
     });
     attempts = saved.attempts || guesses.length;
     won = !!saved.won;
@@ -328,8 +358,8 @@
   function lock() {
     gameOver = true;
     input.disabled = true;
-    document.getElementById('guessBtn').disabled = true;
-    document.getElementById('giveUpBtn').disabled = true;
+    guessBtn.disabled = true;
+    giveUpBtn.disabled = true;
     hideResults();
     shareBlock.style.display = 'block';
     save();
@@ -363,14 +393,16 @@
     else showIt();
   }
 
-  function guessById(id, name) {
-    if (gameOver) return;
-    fetch(GUESS_URL + '?id=' + encodeURIComponent(id) + '&p=' + encodeURIComponent(PLAYER))
-      .then(function (r) { return r.json(); })
+  function guessById(id) {
+    if (gameOver || busy) return;
+    busy = true;
+    getJSON(GUESS_URL + '?id=' + encodeURIComponent(id) + '&p=' + encodeURIComponent(PLAYER))
       .then(function (data) {
+        busy = false;
         if (data.error) { setResult(data.error); return; }
+        adoptDay(data.today);
         hideResults();
-        addGuessRow(data.guess.name, data.guess.alias, data.guess.image, data.columns);
+        addGuessRow(data.guess.name, data.guess.image, data.columns);
         attempts++;
         setAttempts();
         save();
@@ -383,17 +415,25 @@
           input.value = '';
           input.focus();
         }
-      });
+      })
+      .catch(function () { busy = false; failed(); });
   }
 
   function revealAnswer() {
-    fetch(REVEAL_URL + '?p=' + encodeURIComponent(PLAYER))
-      .then(function (r) { return r.json(); })
+    if (gameOver || busy) return;
+    busy = true;
+    giveUpBtn.disabled = true;
+    getJSON(REVEAL_URL + '?p=' + encodeURIComponent(PLAYER))
       .then(function (rev) {
+        busy = false;
+        if (rev.error) { setResult(rev.error); giveUpBtn.disabled = false; return; }
+        adoptDay(rev.today);
         gaveUp = true;
-        addGuessRow(rev.name, rev.alias, rev.image, rev.columns, true);
+        addGuessRow(rev.name, rev.image, rev.columns, true);
+        setResult('Du gav op.');
         lock();
-      });
+      })
+      .catch(function () { busy = false; giveUpBtn.disabled = false; failed(); });
   }
 
   function tryGuess(name) {
@@ -403,18 +443,19 @@
     var hit = results.filter(function (p) {
       return p.name.toLowerCase() === q || (p.alias && p.alias.toLowerCase() === q) || String(p.id) === q;
     })[0];
-    if (hit) { guessById(hit.id, hit.name); return; }
+    if (hit) { guessById(hit.id); return; }
     // Fallback: resolve against the server (matches name, alias or plain ID).
-    fetch(SEARCH_URL + '?q=' + encodeURIComponent(name))
-      .then(function (r) { return r.json(); })
+    getJSON(SEARCH_URL + '?q=' + encodeURIComponent(name))
       .then(function (data) {
+        if (data.error) { setResult(data.error); return; }
         var list = data.products || [];
         var exact = list.filter(function (p) {
           return p.name.toLowerCase() === q || (p.alias && p.alias.toLowerCase() === q) || String(p.id) === q;
         })[0] || list[0];
-        if (exact) { results = list; guessById(exact.id, exact.name); }
+        if (exact) { results = list; guessById(exact.id); }
         else setResult('Ukendt vare: "' + name + '".');
-      });
+      })
+      .catch(failed);
   }
 
   var hoverIndex = -1;
@@ -429,12 +470,13 @@
   function search() {
     var q = input.value.trim();
     if (!q) { results = []; addResultRows([]); return; }
-    fetch(SEARCH_URL + '?q=' + encodeURIComponent(q))
-      .then(function (r) { return r.json(); })
+    getJSON(SEARCH_URL + '?q=' + encodeURIComponent(q))
       .then(function (data) {
+        if (data.error) { setResult(data.error); return; }
         results = data.products || [];
         addResultRows(results);
-      });
+      })
+      .catch(failed);
   }
 
   input.addEventListener('input', function () {
@@ -448,11 +490,8 @@
     if (e.key === 'ArrowDown' && n) { e.preventDefault(); hover((hoverIndex + 1) % n); }
     if (e.key === 'ArrowUp' && n) { e.preventDefault(); hover((hoverIndex - 1 + n) % n); }
   });
-  document.getElementById('guessBtn').addEventListener('click', function () { tryGuess(input.value); });
-  document.getElementById('giveUpBtn').addEventListener('click', function () {
-    setResult('Du gav op.');
-    revealAnswer();
-  });
+  guessBtn.addEventListener('click', function () { tryGuess(input.value); });
+  giveUpBtn.addEventListener('click', revealAnswer);
   document.getElementById('shareBtn').addEventListener('click', share);
 
   var PLAYER = playerId();

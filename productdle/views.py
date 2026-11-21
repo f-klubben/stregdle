@@ -90,7 +90,8 @@ def guess(request):
     if products is None:
         return JsonResponse({"error": "Kan ikke læse varerne lige nu."}, status=503)
 
-    target = logic.daily_target(products)
+    day = timezone.localdate()
+    target = logic.daily_target(products, day)
     if target is None:
         return JsonResponse({"error": "Ingen varer tilgængelige lige nu."}, status=503)
 
@@ -104,13 +105,14 @@ def guess(request):
         return JsonResponse({"error": "Ukendt vare."}, status=404)
 
     won = product.id == target.id
-    stats.record_guess(request.GET.get("p"), product.id, won)
+    stats.record_guess(request.GET.get("p"), product.id, won, day)
 
     return JsonResponse(
         {
             "guess": logic.product_stats(product),
             "columns": logic.compare(product, target),
             "won": won,
+            "today": day.isoformat(),
         }
     )
 
@@ -122,11 +124,12 @@ def reveal(request):
     if products is None:
         return JsonResponse({"error": "Kan ikke læse varerne lige nu."}, status=503)
 
-    target = logic.daily_target(products)
+    day = timezone.localdate()
+    target = logic.daily_target(products, day)
     if target is None:
         return JsonResponse({"error": "Ingen varer tilgængelige lige nu."}, status=503)
 
-    stats.record_gave_up(request.GET.get("p"))
+    stats.record_gave_up(request.GET.get("p"), day)
 
     return JsonResponse(
         {
@@ -134,5 +137,6 @@ def reveal(request):
             "alias": target.alias or "",
             "image": wares.image_for(target.name),
             "columns": logic.compare(target, target),
+            "today": day.isoformat(),
         }
     )

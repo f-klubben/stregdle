@@ -52,6 +52,15 @@ class ViewTest(SimpleTestCase):
         self.assertContains(response, "encodeURIComponent(PLAYER)")
         self.assertContains(response, "var PLAYER_KEY = 'stregdle:player';")
 
+    def test_guess_carries_the_server_day(self):
+        target = logic.daily_target(self.repo.products())
+        data = self.client.get("/guess/", {"id": target.id}).json()
+        self.assertEqual(data["today"], timezone.localdate().isoformat())
+
+    def test_reveal_carries_the_server_day(self):
+        data = self.client.get("/reveal/").json()
+        self.assertEqual(data["today"], timezone.localdate().isoformat())
+
     def test_board_scrolls_inside_its_block(self):
         response = self.client.get("/")
         self.assertEqual(response.content.decode().count('class="sdl-scroll"'), 2)
