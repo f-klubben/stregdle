@@ -14,6 +14,7 @@ import datetime
 import random
 import re
 
+from django.conf import settings
 from django.utils import timezone
 
 from . import wares
@@ -71,12 +72,17 @@ def answer_pool(products) -> list:
     return [p for p in products if p.last_sale_days is not None and p.last_sale_days <= ANSWER_MAX_AGE_DAYS]
 
 
+def game_day():
+    """The day being played: the local date, shifted back by STREGDLE_DAY_OFFSET."""
+    return timezone.localdate() - datetime.timedelta(days=settings.DAY_OFFSET)
+
+
 def daily_target(products, day=None):
     """The product of the day (deterministic per date, stable for that date)."""
     pool = sorted(answer_pool(products), key=lambda product: product.id)
     if not pool:
         return None
-    day = day or timezone.localdate()
+    day = day or game_day()
     key = day.isoformat()
 
     cached_id = _target_cache.get(key)
