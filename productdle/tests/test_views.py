@@ -178,6 +178,10 @@ class ViewTest(SimpleTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["stats"]["guesses"], 0)
 
+    def test_statistics_page_can_be_framed_by_the_kiosk(self):
+        self.assertNotIn("X-Frame-Options", self.client.get("/statistics/"))
+        self.assertIn("X-Frame-Options", self.client.get("/"))
+
     def test_statistics_page_counts_only_today(self):
         target = logic.daily_target(self.repo.products())
         self.client.get("/guess/", {"id": target.id, "p": "aaaaaaaa11"})

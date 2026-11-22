@@ -8,6 +8,7 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
+from django.views.decorators.clickjacking import xframe_options_exempt
 from django.views.decorators.http import require_GET
 
 from . import logic, stats, wares
@@ -36,8 +37,12 @@ def index(request):
 
 
 @require_GET
+@xframe_options_exempt
 def statistics(request):
-    """Today's game in numbers, for the kiosk screen. Counts only, no spoilers."""
+    """Today's game in numbers, for the kiosk screen. Counts only, no spoilers.
+
+    The kiosk frames this page from another origin, so the global X_FRAME_OPTIONS = "DENY" does not apply here.
+    """
     today = _day()
     return render(
         request,
