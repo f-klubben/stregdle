@@ -62,6 +62,10 @@ SOURCE_URL = _env("STREGDLE_SOURCE_URL", "")
 # Where the day's guesses are appended; empty disables the tally.
 STREGDLE_STATS_DIR = _env("STREGDLE_STATS_DIR", str(BASE_DIR / "var"))
 
+# How many days the game's clock runs behind: the test instance sets 1 to replay
+# yesterday's answer. Production leaves it unset.
+DAY_OFFSET = int(_env("STREGDLE_DAY_OFFSET", "0") or 0)
+
 # Read-only access to the stregsystem database. Use a MySQL user that only has
 # SELECT rights on the stregsystem schema.
 STREG_DB = {

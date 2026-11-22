@@ -63,6 +63,13 @@ class ViewTest(SimpleTestCase):
         data = self.client.get("/reveal/").json()
         self.assertEqual(data["today"], timezone.localdate().isoformat())
 
+    @override_settings(DAY_OFFSET=1)
+    def test_day_offset_replays_the_previous_day(self):
+        yesterday = (timezone.localdate() - datetime.timedelta(days=1)).isoformat()
+        self.assertEqual(self.client.get("/guess/", {"id": self.cola.id}).json()["today"], yesterday)
+        self.assertEqual(self.client.get("/reveal/").json()["today"], yesterday)
+        self.assertContains(self.client.get("/"), f'var TODAY = "{yesterday}"')
+
     def test_board_scrolls_inside_its_block(self):
         response = self.client.get("/")
         self.assertEqual(response.content.decode().count('class="sdl-scroll"'), 1)

@@ -48,6 +48,7 @@ Everything is set through environment variables:
 | `STREGSYSTEM_URL`      | `http://localhost:8000/`       | Where the header's Menu/Genstart buttons point   |
 | `STREGDLE_SOURCE_URL`  | (unset)                        | Source link in the footer; omitted when unset    |
 | `STREGDLE_STATS_DIR`   | `<checkout>/var`               | Where the day's guess tally is written; empty disables it |
+| `STREGDLE_DAY_OFFSET`  | `0`                            | Days the game's clock runs behind; the test site uses `1` to replay yesterday |
 | `STREGDLE_SECRET_KEY`  | dev key                        | Set a real one in production                     |
 | `STREGDLE_ALLOWED_HOSTS` | `localhost,127.0.0.1`        | Comma-separated host names                       |
 | `STREGDLE_HTTPS`       | (off)                          | `1` when served over HTTPS (enables redirect, HSTS and secure cookies) |

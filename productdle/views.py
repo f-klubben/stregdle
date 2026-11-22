@@ -2,6 +2,8 @@
 
 import logging
 
+from datetime import timedelta
+
 from django.conf import settings
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -16,6 +18,10 @@ logger = logging.getLogger(__name__)
 SEARCH_LIMIT = 10
 
 
+def _day():
+    return timezone.localdate() - timedelta(days=settings.DAY_OFFSET)
+
+
 def index(request):
     return render(
         request,
@@ -23,7 +29,7 @@ def index(request):
         {
             "stregsystem_url": settings.STREGSYSTEM_URL,
             "source_url": settings.SOURCE_URL,
-            "today": timezone.localdate().isoformat(),
+            "today": _day().isoformat(),
             "columns": logic.COLUMNS,
         },
     )
@@ -32,7 +38,7 @@ def index(request):
 @require_GET
 def statistics(request):
     """Today's game in numbers, for the kiosk screen. Counts only, no spoilers."""
-    today = timezone.localdate()
+    today = _day()
     return render(
         request,
         "productdle/statistics.html",
@@ -90,7 +96,7 @@ def guess(request):
     if products is None:
         return JsonResponse({"error": "Kan ikke læse varerne lige nu."}, status=503)
 
-    day = timezone.localdate()
+    day = _day()
     target = logic.daily_target(products, day)
     if target is None:
         return JsonResponse({"error": "Ingen varer tilgængelige lige nu."}, status=503)
@@ -124,7 +130,7 @@ def reveal(request):
     if products is None:
         return JsonResponse({"error": "Kan ikke læse varerne lige nu."}, status=503)
 
-    day = timezone.localdate()
+    day = _day()
     target = logic.daily_target(products, day)
     if target is None:
         return JsonResponse({"error": "Ingen varer tilgængelige lige nu."}, status=503)
