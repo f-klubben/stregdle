@@ -84,22 +84,7 @@
     <button type="button" id="giveUpBtn">Giv op</button>
   </div>
 
-  <!-- Search results: same columns/format as the guess board. -->
-  <div class="sdl-block" id="resultsBlock" style="display:none;">
-    <div class="sdl-scroll">
-      <table class="default sdl-table">
-        <thead>
-          <tr>
-            <th>Produkt</th>
-            {% for column in columns %}<th>{{ column.label }}</th>{% endfor %}
-          </tr>
-        </thead>
-        <tbody id="resultsRows"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- The guess board; newest guess at the top. -->
+  <!-- One table for both lists, so the search results line up with the guesses. -->
   <div class="sdl-block">
     <div class="sdl-scroll">
       <table class="default sdl-table">
@@ -109,6 +94,7 @@
             {% for column in columns %}<th>{{ column.label }}</th>{% endfor %}
           </tr>
         </thead>
+        <tbody id="resultsRows" style="display:none;"></tbody>
         <tbody id="rows">
           <tr id="empty-row"><td colspan="{{ columns|length|add:1 }}"><p class="sdl-hint">Endnu ingen gæt.</p></td></tr>
         </tbody>
@@ -156,7 +142,6 @@
   var rowsBody = document.getElementById('rows');
   var statusEl = document.getElementById('status');
   var attemptsEl = document.getElementById('attempts');
-  var resultsBlock = document.getElementById('resultsBlock');
   var resultsRows = document.getElementById('resultsRows');
   var shareBlock = document.getElementById('shareBlock');
   var shareText = document.getElementById('shareText');
@@ -247,11 +232,11 @@
       tr.addEventListener('click', function () { guessById(p.id, p.name); });
       resultsRows.appendChild(tr);
     });
-    resultsBlock.style.display = results.length ? 'block' : 'none';
+    resultsRows.style.display = results.length ? '' : 'none';
     updateScrollCues();
   }
 
-  function hideResults() { resultsBlock.style.display = 'none'; }
+  function hideResults() { resultsRows.style.display = 'none'; }
 
   function updateScrollCues() {
     Array.prototype.forEach.call(document.querySelectorAll('.sdl-block'), function (block) {
@@ -504,7 +489,7 @@
     var n = resultsRows.children.length;
     if (e.key === 'Enter') {
       e.preventDefault();
-      var picked = resultsBlock.style.display !== 'none' ? results[hoverIndex] : null;
+      var picked = resultsRows.style.display !== 'none' ? results[hoverIndex] : null;
       if (picked) guessById(picked.id, picked.name);
       else tryGuess(input.value);
       hideResults();

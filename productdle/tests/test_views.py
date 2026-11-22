@@ -65,7 +65,7 @@ class ViewTest(SimpleTestCase):
 
     def test_board_scrolls_inside_its_block(self):
         response = self.client.get("/")
-        self.assertEqual(response.content.decode().count('class="sdl-scroll"'), 2)
+        self.assertEqual(response.content.decode().count('class="sdl-scroll"'), 1)
 
     def test_healthz_is_cheap_and_ok(self):
         # No database access: the pool is not even consulted on this path.
