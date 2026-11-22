@@ -53,7 +53,7 @@ main {
   }
 }
 
-h1 { color: red }
+h1 { color: red; font-size: clamp(1.25em, 5vw, 2em) }
 
 /*div { border-color: red;
       border-style: solid;
