@@ -24,13 +24,7 @@
   .sdl-control { display: flex; flex-wrap: wrap; gap: .5em; justify-content: center; margin-bottom: 1em; }
   .sdl-control input { width: 26em; min-width: 0; font-size: 1em; }
   .sdl-control .guess { background: #cf1020; color: #fff; }
-  .sdl-block { position: relative; margin-bottom: 1em; }
-  .sdl-block::after {
-    content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 2.5em;
-    background: linear-gradient(to right, rgba(255, 255, 255, 0), #fff);
-    pointer-events: none;
-  }
-  .sdl-block:not(.scrollable)::after, .sdl-block.at-end::after { display: none; }
+  .sdl-block { margin-bottom: 1em; }
   table.sdl-table { width: 100%; margin: 0 auto; }
   table.sdl-table th, table.sdl-table td { padding: 7px 8px; text-align: center; }
   table.sdl-table th:first-child, table.sdl-table td:first-child { text-align: left; }
@@ -47,7 +41,6 @@
   .sdl-share { text-align: center; margin-top: 1em; }
   #shareText { width: 100%; max-width: 32em; margin-top: .5em; font-family: monospace; }
   .sdl-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  table.sdl-table th, table.sdl-table td:not(:first-child) { white-space: nowrap; }
   table.sdl-table th:first-child,
   table.sdl-table tbody tr:not(#empty-row) > td:first-child {
     position: sticky; left: 0; z-index: 1; background: #fff;
@@ -211,7 +204,6 @@
     if (!isAnswer) guesses.push(columns.map(function (c) { return c.status; }));
     board.push({ id: id, name: name, image: image, columns: columns, isAnswer: !!isAnswer });
     save();
-    updateScrollCues();
   }
 
   // Search results render as rows identical to guessed rows, neutral + clickable.
@@ -233,25 +225,9 @@
       resultsRows.appendChild(tr);
     });
     resultsRows.style.display = results.length ? '' : 'none';
-    updateScrollCues();
   }
 
   function hideResults() { resultsRows.style.display = 'none'; }
-
-  function updateScrollCues() {
-    Array.prototype.forEach.call(document.querySelectorAll('.sdl-block'), function (block) {
-      var scroller = block.querySelector('.sdl-scroll');
-      if (!scroller) return;
-      var scrollable = scroller.scrollWidth > scroller.clientWidth + 1;
-      block.classList.toggle('scrollable', scrollable);
-      block.classList.toggle('at-end', scrollable && scroller.scrollLeft + scroller.clientWidth >= scroller.scrollWidth - 1);
-    });
-  }
-
-  Array.prototype.forEach.call(document.querySelectorAll('.sdl-scroll'), function (el) {
-    el.addEventListener('scroll', updateScrollCues);
-  });
-  window.addEventListener('resize', updateScrollCues);
 
   // Random, browser-local id: lets the statistics page count players.
   function playerId() {
@@ -507,7 +483,6 @@
 
   var PLAYER = playerId();
   restore();
-  updateScrollCues();
   input.focus();
 })();
 </script>
