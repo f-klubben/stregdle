@@ -1,12 +1,7 @@
 #!/bin/bash
-# Nightly deploy of Stregsystemdle, run from cron.
-#
-#   auto-deploy.sh prod   the live site: only commits at least 24 hours old,
-#                         so every change has had a day on the test site before
-#                         it can reach players
-#   auto-deploy.sh test   the test site: simply origin/main
-#
-# Only ever moves a checkout forward, and refuses to touch a dirty one.
+# Nightly deploy, run from cron: `auto-deploy.sh test` follows origin/main,
+# `auto-deploy.sh prod` takes the newest commit at least 24 hours old. Moves a
+# checkout forward only, and refuses a dirty one.
 set -uo pipefail
 
 MODE=${1:-}
