@@ -1,0 +1,8 @@
+# Nightly deploy of Stregsystemdle. Installed as /etc/cron.d/stregdle.
+# The test site follows origin/main; the live site only takes commits at least
+# 24 hours old. See deploy/auto-deploy.sh.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+5 0 * * * root /usr/local/sbin/stregdle-auto-deploy.sh test
+10 0 * * * root /usr/local/sbin/stregdle-auto-deploy.sh prod

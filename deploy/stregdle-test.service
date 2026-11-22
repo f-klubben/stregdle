@@ -1,0 +1,24 @@
+[Unit]
+Description=Stregsystemdle test site (replays yesterday's answer)
+After=network-online.target mysql.service
+Wants=network-online.target
+
+[Service]
+User=stregdle
+Group=stregdle
+WorkingDirectory=/data/stregdle-test
+EnvironmentFile=/data/stregdle-test/stregdle-test.env
+ExecStart=/data/stregdle-test/venv/bin/gunicorn stregdle.wsgi:application --bind 127.0.0.1:8002 --workers 2 --timeout 30 --access-logfile - --error-logfile -
+Restart=on-failure
+RestartSec=3
+
+Environment=PYTHONDONTWRITEBYTECODE=1
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/data/stregdle-test/staticfiles /data/stregdle-test/var
+
+[Install]
+WantedBy=multi-user.target

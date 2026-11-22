@@ -129,14 +129,27 @@ sudo caddy reload --config /srv/infra/caddy/Caddyfile --adapter caddyfile
 - Static files: `collectstatic` writes `/data/stregdle/staticfiles`, which Caddy
   serves under `/static/` with a 30 day cache.
 
+### Nightly deploy
+
+`/etc/cron.d/stregdle` runs `deploy/auto-deploy.sh` as root every night: at 00:05
+the test site resets to `origin/main`, at 00:10 production advances to the newest
+commit that is at least 24 hours old. Every change therefore gets a day on the test
+site before it can reach players, and a release never lands mid-game. Both paths
+reinstall, run `collectstatic` and restart the unit, only ever move a checkout
+forward, and leave alone one that has tracked local changes. The log is
+`/var/log/stregdle-deploy.log`.
+
+```sh
+sudo install -m 755 deploy/auto-deploy.sh /usr/local/sbin/stregdle-auto-deploy.sh
+sudo install -m 644 deploy/stregdle.cron /etc/cron.d/stregdle
+```
+
 ### Cutting over at midnight
 
 A change that alters the game itself - the columns, the scoring, the answer pool -
-must not land in the middle of a day: players are mid-board. Deploy it in two
-halves:
-
-1. Leave the running checkout alone and push the new release to `main`.
-2. Install the cutover timer for the coming midnight:
+must not land in the middle of a day: players are mid-board. The nightly job above
+already holds such a change back until midnight; use the cutover timer only when it
+has to be live sooner:
 
 ```sh
 sudo install -m 755 deploy/cutover.sh /usr/local/sbin/stregdle-cutover.sh
@@ -167,6 +180,23 @@ sudo systemctl restart stregdle
 The app writes nothing itself except the guess tally in `STREGDLE_STATS_DIR`
 (and `staticfiles/`, during `collectstatic`), so the only other persistent state
 on the host is the checkout.
+
+### Test site
+
+`test.stregdle.fklub.dk` runs the same app from a second checkout,
+`/data/stregdle-test`, with its own venv, its own unit (`stregdle-test.service`,
+gunicorn on `127.0.0.1:8002`) and its own Caddy block (`deploy/caddy-test.conf`).
+It sets `STREGDLE_DAY_OFFSET=1`, so the page replays yesterday's answer instead of
+today's, and keeps its tally under `/data/stregdle-test/var`, apart from the real
+game. To try the latest code there, push it and run:
+
+```sh
+sudo bash /data/stregdle/deploy/test-site.sh
+```
+
+The script resets the test checkout to `origin/main`, reinstalls, runs
+`collectstatic`, reloads the unit and reports what the site answers, so local
+edits in `/data/stregdle-test` do not survive it.
 
 ## The statistics page
 
